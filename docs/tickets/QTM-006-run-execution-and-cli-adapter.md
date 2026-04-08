@@ -14,8 +14,10 @@
 - Claude Code adapter 初版
 - run start / stop / retry
 - run status 反映
+- needs input 再開
 - log panel
 - run history
+- interaction panel 連携
 
 ## Done Criteria
 
@@ -24,6 +26,8 @@
 - run 履歴を一覧できる
 - run の再試行ができる
 - input 待ちを `needs input` として表現できる
+- `needs input` から同一 run を再開できる
+- run ごとの interaction log を表示できる
 
 ## Validation
 
@@ -31,6 +35,7 @@
 - 1 agent 実行確認
 - 複数 agent 並列実行確認
 - ログ保存確認
+- needs input 再開確認
 
 ## Notes
 

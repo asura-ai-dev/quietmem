@@ -32,6 +32,8 @@
 - worktree を作成できる
 - worktree 一覧を表示できる
 - branch 表示と branch 切替ができる
+- agent は `active_worktree_id` を持ち、現在の作業場を 1 つ選択できる
+- editor、file tree、diff、run は基本的に active worktree に従う
 
 ### 4. Git Visibility
 
@@ -43,6 +45,7 @@
 
 - MVP では worktree 作成、一覧表示、branch 表示、branch 切替、changed files 確認、diff 確認を GUI 化する
 - rebase、squash、複雑な merge、PR 自動化は後回しとする
+- run 実行時に別 worktree を都度選ばせる UI は MVP 対象外とし、常に active worktree を使う
 
 ## Acceptance Criteria
 
