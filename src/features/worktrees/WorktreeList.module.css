@@ -1,0 +1,124 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto auto;
+  align-items: baseline;
+  row-gap: 2px;
+  column-gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--fg-primary);
+}
+
+.item:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.itemBranch {
+  grid-column: 1;
+  grid-row: 1;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  font-family: var(--font-mono);
+  color: var(--fg-primary);
+  overflow-wrap: anywhere;
+}
+
+.itemStatus {
+  grid-column: 2;
+  grid-row: 1;
+  font-size: 10px;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.itemStatus[data-status="ready"] {
+  color: var(--accent-primary);
+  border-color: rgba(111, 143, 106, 0.35);
+}
+
+.itemStatus[data-status="busy"],
+.itemStatus[data-status="running"] {
+  color: var(--accent-attention);
+  border-color: rgba(217, 154, 43, 0.35);
+}
+
+.itemBase {
+  grid-column: 1;
+  grid-row: 2;
+  font-size: 11px;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.itemAgent {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: 10px;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  overflow-wrap: anywhere;
+}
+
+.itemPath {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  font-size: 10px;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+  opacity: 0.75;
+}
+
+.emptyState {
+  /* quiet muted state with a small amber dot, matching AgentList / ProjectList */
+  margin: 0;
+  padding: var(--space-3) var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--fg-muted);
+  font-style: italic;
+  line-height: 1.55;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 1px dashed rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.emptyState::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-attention);
+  opacity: 0.65;
+  flex: 0 0 auto;
+}
