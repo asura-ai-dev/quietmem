@@ -23,6 +23,7 @@
 - Monaco 上でファイル内容を編集できる
 - 複数タブを扱える
 - 現在の worktree に応じて対象ファイルが切り替わる
+- active worktree 切替時に editor / file tree の対象が更新される
 
 ## Validation
 

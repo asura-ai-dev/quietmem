@@ -14,7 +14,7 @@
 - Header
 - LeftSidebar
 - MainTabs
-- RightPanel
+- RightPanel / Interaction Panel
 - BottomDrawer
 - 基本タブ切替とパネル開閉
 
@@ -24,6 +24,7 @@
 - Overview / Editor / Memory / Runs / Cron のタブ切替ができる
 - Dashboard、Settings、初回セットアップの別画面方針が反映される
 - デザイン基礎色がカラー方針に沿って定義されている
+- 右ペインがチャット主役ではなく run / memory 補助パネルとして表示される
 
 ## Validation
 

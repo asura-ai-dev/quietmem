@@ -23,6 +23,7 @@
 - agent の設定を編集できる
 - agent を複製できる
 - `idle` / `running` / `error` / `needs input` が UI 上で識別できる
+- 複製時に agent 固有 memory を引き継がない方針が UI と処理に反映される
 
 ## Validation
 

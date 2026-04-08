@@ -6,7 +6,7 @@
 
 ## Goal
 
-- agent の定期実行をアプリ内蔵スケジューラで管理し、run と一元的に追跡できるようにする。
+- agent の定期実行と Memory Digest をアプリ内蔵スケジューラで管理し、run と一元的に追跡できるようにする。
 
 ## Scope
 
@@ -15,6 +15,7 @@
 - 手動実行
 - cron 実行履歴
 - run との紐付け
+- Memory Digest 生成
 
 ## Done Criteria
 
@@ -23,6 +24,7 @@
 - cron job を手動実行できる
 - 実行結果が Run として保存される
 - 実行履歴を確認できる
+- daily / weekly / monthly / yearly の Memory Digest を生成できる
 
 ## Validation
 
@@ -30,6 +32,7 @@
 - 手動実行確認
 - run 紐付け確認
 - 履歴表示確認
+- Memory Digest 生成確認
 
 ## Notes
 

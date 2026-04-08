@@ -13,6 +13,8 @@
 - status 見え方調整
 - エラーハンドリング
 - memory 候補表示
+- on-demand memory loading UX
+- Interaction Panel UX 調整
 - 主要導線の UX 調整
 - MVP 確認項目の仕上げ
 
@@ -21,6 +23,7 @@
 - error / running / needs input の見え方が明確である
 - 主要失敗ケースに UI 上の導線がある
 - memory 候補表示が最低限機能する
+- on-demand memory loading の主要導線が分かりやすい
 - MVP 成功条件の確認チェックができる
 
 ## Validation

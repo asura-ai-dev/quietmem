@@ -20,12 +20,15 @@
 - 実行ログ全文を表示できる
 - run 履歴を表示できる
 - retry を実行できる
+- stop / cancel を実行できる
 
 ### 2. Run Status
 
 - run status を可視化できる
 - agent status と run status の整合を保つ
 - input 待ち状態を needs input として扱える
+- run status は `queued`、`running`、`needs_input`、`succeeded`、`failed`、`cancelled` を持つ
+- `needs_input` は失敗ではなく一時停止状態であり、ユーザー入力後に同一 run を再開できる
 
 ### 3. CLI Adapter Scope
 
@@ -47,18 +50,20 @@
 ### 5. MVP Execution Flow
 
 - Agent を選ぶ
-- worktree を選ぶ
+- active worktree を確認する
 - memory scope を確認する
 - prompt / task を入力する
 - Run を実行する
 - log / status / diff を見る
 - curated memory を更新する
+- 不足時に on-demand memory loading で追加文脈を読む
 
 ## Acceptance Criteria
 
 - GUI から CLI agent を起動し、状態遷移を追跡できる
 - 複数 agent を同時実行しても一覧上で状態を識別できる
 - Adapter の責務が過剰に肥大化していない
+- needs input から同一 run を再開できる
 
 ## Non-Goals
 
