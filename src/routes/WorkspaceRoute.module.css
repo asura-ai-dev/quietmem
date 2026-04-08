@@ -1,0 +1,49 @@
+.root {
+  display: grid;
+  height: 100%;
+  width: 100%;
+  grid-template-columns: 240px 1fr 320px;
+  /*
+   * grid-template-rows は WorkspaceRoute.tsx 側で inline style により
+   * drawerOpen に応じて "48px 1fr 32px" / "48px 1fr 272px" を切り替える。
+   * 初期値として閉じた状態 (32px) を指定しておく。
+   */
+  grid-template-rows: 48px 1fr 32px;
+  grid-template-areas:
+    "header header header"
+    "left   main   right"
+    "drawer drawer drawer";
+  background:
+    radial-gradient(
+      ellipse 60% 40% at 50% 30%,
+      rgba(111, 143, 106, 0.04) 0%,
+      transparent 100%
+    ),
+    var(--bg-app);
+  color: var(--fg-primary);
+  transition: grid-template-rows 160ms ease;
+  position: relative;
+}
+
+.root::before {
+  /* subtle monochrome grain to break the flat dark surface */
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.6 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  mix-blend-mode: overlay;
+}
+
+.root > * {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * Header (.header), LeftSidebar (.left), MainTabs (.main), RightPanel (.right),
+ * BottomDrawer (.drawer) は task-1E02 / task-1E03 / task-1E04 で個別コンポーネント +
+ * CSS Modules に分離済み。grid-area はそれぞれのコンポーネント側で指定する。
+ */
