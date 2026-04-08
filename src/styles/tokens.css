@@ -1,0 +1,55 @@
+:root {
+  /* Sage green (primary) */
+  --color-sage-50: #f1f5f1;
+  --color-sage-200: #c8d8c6;
+  --color-sage-400: #8fa98a;
+  --color-sage-500: #6f8f6a;
+  --color-sage-600: #577555;
+  --color-sage-700: #425c40;
+
+  /* Dark gray (surface/text) */
+  --color-gray-50: #f4f5f5;
+  --color-gray-200: #d4d6d6;
+  --color-gray-400: #8a8d8d;
+  --color-gray-600: #45494a;
+  --color-gray-800: #24272a;
+  --color-gray-900: #15181a;
+
+  /* Amber (accent) */
+  --color-amber-300: #f0c46b;
+  --color-amber-500: #d99a2b;
+  --color-amber-700: #a06d12;
+
+  /* Semantic aliases */
+  --bg-app: var(--color-gray-900);
+  --bg-surface: var(--color-gray-800);
+  --bg-surface-2: var(--color-gray-600);
+  --fg-primary: var(--color-gray-50);
+  --fg-muted: var(--color-gray-400);
+  --accent-primary: var(--color-sage-500);
+  --accent-primary-hover: var(--color-sage-400);
+  --accent-attention: var(--color-amber-500);
+  --border-subtle: var(--color-gray-600);
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  --font-mono: "SF Mono", Menlo, monospace;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+}

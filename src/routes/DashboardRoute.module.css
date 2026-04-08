@@ -1,0 +1,101 @@
+.root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  width: 100%;
+  padding: var(--space-8) var(--space-4);
+  background:
+    radial-gradient(
+      ellipse at top,
+      rgba(111, 143, 106, 0.05) 0%,
+      transparent 60%
+    ),
+    var(--bg-app);
+  color: var(--fg-primary);
+}
+
+.card {
+  width: 100%;
+  max-width: 440px;
+  padding: var(--space-8);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  text-align: center;
+  position: relative;
+  box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.45);
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: var(--space-6);
+  right: var(--space-6);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-sage-600),
+    transparent
+  );
+  opacity: 0.6;
+}
+
+.eyebrow {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+  color: var(--fg-primary);
+  letter-spacing: 0.01em;
+}
+
+.subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--fg-muted);
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-4);
+}
+
+.backButton {
+  appearance: none;
+  background: transparent;
+  color: var(--fg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px var(--space-6);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease;
+}
+
+.backButton:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.backButton:focus-visible {
+  outline: none;
+  border-color: var(--accent-primary);
+}

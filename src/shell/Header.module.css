@@ -1,0 +1,127 @@
+.root {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 0 var(--space-5, 20px);
+  background: linear-gradient(
+    180deg,
+    var(--color-gray-800) 0%,
+    var(--color-gray-900) 100%
+  );
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--fg-primary);
+  position: relative;
+}
+
+.root::after {
+  /* subtle sage hairline to give the header a quiet anchor */
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-sage-700) 18%,
+    var(--color-sage-600) 50%,
+    var(--color-sage-700) 82%,
+    transparent 100%
+  );
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.brandGroup {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.brandMark {
+  /* small sage dot as the identity mark */
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(111, 143, 106, 0.14);
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+.brand {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--fg-primary);
+}
+
+.tagline {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--fg-muted);
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--border-subtle);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.navButton {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--fg-muted);
+  padding: 6px var(--space-3);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    color 120ms ease,
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+.navButton:hover {
+  color: var(--fg-primary);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.navButton:focus-visible {
+  outline: none;
+  border-color: var(--accent-primary);
+  color: var(--fg-primary);
+}
+
+.breadcrumb {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-left: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-muted);
+  letter-spacing: 0.02em;
+  min-width: 0;
+}
+
+.breadcrumbSep {
+  color: var(--color-gray-600);
+}
+
+.breadcrumbItem {
+  color: var(--fg-muted);
+}

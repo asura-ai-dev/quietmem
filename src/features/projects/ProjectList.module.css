@@ -1,0 +1,106 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.itemButton {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: baseline;
+  row-gap: 2px;
+  column-gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  color: var(--fg-primary);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+
+.itemButton:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.itemButton:focus-visible {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.itemButtonSelected {
+  background: rgba(111, 143, 106, 0.08);
+  border-left: 2px solid var(--accent-primary);
+  padding-left: calc(var(--space-3) - 2px);
+}
+
+.itemName {
+  grid-column: 1;
+  grid-row: 1;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--fg-primary);
+}
+
+.itemSlug {
+  grid-column: 2;
+  grid-row: 1;
+  font-size: 10px;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
+.itemRootPath {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  font-size: 11px;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+  opacity: 0.85;
+}
+
+.emptyState {
+  /* quiet muted state with a small amber dot, matching LeftSidebar / RightPanel */
+  margin: 0;
+  padding: var(--space-3) var(--space-3);
+  font-size: var(--font-size-sm);
+  color: var(--fg-muted);
+  font-style: italic;
+  line-height: 1.55;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 1px dashed rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.emptyState::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-attention);
+  opacity: 0.65;
+  flex: 0 0 auto;
+}

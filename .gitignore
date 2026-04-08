@@ -1,0 +1,15 @@
+# Node / pnpm
+node_modules/
+
+# Build output
+dist/
+
+# Tauri / Rust build artifacts
+src-tauri/target/
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
