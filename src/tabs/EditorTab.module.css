@@ -218,6 +218,94 @@
   gap: var(--space-4);
 }
 
+.editorTabs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  overflow-x: auto;
+}
+
+.editorTabChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.editorTabChip[data-active="true"] {
+  border-color: rgba(111, 143, 106, 0.34);
+  background: rgba(111, 143, 106, 0.14);
+}
+
+.editorTabButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 220px;
+  padding: 8px 0 8px 12px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.editorTabButton:focus-visible,
+.editorTabClose:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(111, 143, 106, 0.42);
+  border-radius: 10px;
+}
+
+.editorTabName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--fg-primary);
+}
+
+.editorDirtyMark {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-amber-300);
+  box-shadow: 0 0 0 4px rgba(217, 154, 43, 0.14);
+}
+
+.editorTabClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-right: 6px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+
+.editorTabClose:hover,
+.editorTabButton:hover {
+  color: var(--fg-primary);
+}
+
+.editorEmptyTabs {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
 .editorHeader {
   display: flex;
   align-items: flex-end;
