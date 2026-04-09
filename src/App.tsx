@@ -15,8 +15,8 @@ import { useUiStore } from "./store/uiStore";
  *
  * マウント時の初期化:
  * 1. `projectStore.refresh()` を 1 度だけ呼ぶ
- * 2. その結果 projects が 0 件で、かつ現在 route が "workspace" なら
- *    "firstRun" に遷移する (初回起動フロー)
+ * 2. Project が 0 件でも Workspace へ入れる。作成導線は Workspace 内の
+ *    Overview / LeftSidebar empty state から辿れるようにする。
  *
  * 参照:
  * - agent-docs/ui-shell.md (ルーティング戦略)
@@ -25,9 +25,7 @@ import { useUiStore } from "./store/uiStore";
  */
 function App() {
   const route = useUiStore((state) => state.route);
-  const setRoute = useUiStore((state) => state.setRoute);
   const refreshProjects = useProjectStore((state) => state.refresh);
-  const projects = useProjectStore((state) => state.projects);
 
   // 初回マウント時に Project 一覧を取得する。
   // 依存は空配列で意図的に 1 度だけ実行する。
@@ -35,22 +33,6 @@ function App() {
     void refreshProjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // refresh 後に projects が 0 件で workspace ルートにいる場合、
-  // firstRun に遷移させる。
-  //
-  // NOTE (ui-review only): Phase 1E の視覚評価時、FirstRun から
-  // Workspace へ遷移したあと再び firstRun に戻ってしまうのを避けるため、
-  // __UI_REVIEW__ フラグが立っているときだけガードを無効化する。
-  useEffect(() => {
-    const reviewMode =
-      typeof window !== "undefined" &&
-      (window as unknown as { __UI_REVIEW__?: boolean }).__UI_REVIEW__ === true;
-    if (reviewMode) return;
-    if (projects.length === 0 && route === "workspace") {
-      setRoute("firstRun");
-    }
-  }, [projects, route, setRoute]);
 
   switch (route) {
     case "firstRun":

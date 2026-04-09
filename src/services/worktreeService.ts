@@ -6,6 +6,7 @@
 // 注意: worktree_list_by_project は引数 1 つのため `{ projectId }` をフラットに渡す。
 
 import type {
+  WorktreeTreeSource,
   Worktree,
   WorktreeCreateInput,
   WorktreeUpdateInput,
@@ -17,6 +18,8 @@ const worktreeService = {
     safeInvoke<Worktree>("worktree_create", { input }),
   listByProject: (projectId: string): Promise<Worktree[]> =>
     safeInvoke<Worktree[]>("worktree_list_by_project", { projectId }),
+  getFileTree: (worktreeId: string): Promise<WorktreeTreeSource> =>
+    safeInvoke<WorktreeTreeSource>("worktree_get_file_tree", { worktreeId }),
   update: (input: WorktreeUpdateInput): Promise<Worktree> =>
     safeInvoke<Worktree>("worktree_update", { input }),
 } as const;

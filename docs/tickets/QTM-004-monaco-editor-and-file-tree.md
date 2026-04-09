@@ -138,11 +138,11 @@ Depends on: QTM-002, QTM-003
 - Goal
 - active worktree から file tree を構築するためのデータ取得基盤を作る
 - Checklist
-- [ ] active worktree を参照して対象ルートパスを決定するデータフローを整理する
-- [ ] hidden file や対象外ディレクトリの MVP 方針を決める
-- [ ] worktree 配下のディレクトリ・ファイル一覧取得 API を用意する
-- [ ] file tree 用の表示データ構造を定義する
-- [ ] worktree 未選択時の empty state を定義する
+- [x] active worktree を参照して対象ルートパスを決定するデータフローを整理する
+- [x] hidden file や対象外ディレクトリの MVP 方針を決める
+- [x] worktree 配下のディレクトリ・ファイル一覧取得 API を用意する
+- [x] file tree 用の表示データ構造を定義する
+- [x] worktree 未選択時の empty state を定義する
 - Done
 - active worktree に応じた file tree データを取得できる
 - worktree 未選択時の UI 方針が決まっている

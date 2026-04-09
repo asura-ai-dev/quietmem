@@ -89,6 +89,94 @@
   line-height: 1.6;
 }
 
+.treePanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.treeMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--fg-muted);
+}
+
+.treeList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.treeList[data-level="0"] {
+  padding-left: 0;
+}
+
+.treeList[data-level="1"],
+.treeList[data-level="2"],
+.treeList[data-level="3"],
+.treeList[data-level="4"] {
+  margin-top: 6px;
+  padding-left: 18px;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.treeItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.treeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.treeMarker {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.treeRow[data-kind="directory"] .treeMarker {
+  color: var(--color-sage-100);
+  background: rgba(111, 143, 106, 0.18);
+}
+
+.treeRow[data-kind="file"] .treeMarker {
+  color: var(--color-amber-300);
+  background: rgba(217, 154, 43, 0.12);
+}
+
+.treeName {
+  min-width: 0;
+  color: var(--fg-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.placeholderText {
+  color: var(--fg-muted);
+  line-height: 1.6;
+}
+
 .editorPane {
   display: flex;
   flex-direction: column;

@@ -1,24 +1,70 @@
 import Editor, { type BeforeMount } from "@monaco-editor/react";
+import { useEffect, useMemo, useState } from "react";
+import { worktreeService } from "../services/worktreeService";
+import { useAgentStore } from "../store/agentStore";
+import { useProjectStore } from "../store/projectStore";
+import { useUiStore } from "../store/uiStore";
+import type {
+  Agent,
+  AppErrorPayload,
+  FileTreeNode,
+  Worktree,
+  WorktreeTreeSource,
+} from "../types/bindings";
 import styles from "./EditorTab.module.css";
 
-/**
- * EditorTab
- *
- * QTM-004A: Monaco ベースの editor foundation。
- *
- * file tree / worktree / file open/save は後続 ticket で接続する。
- */
+const EMPTY_AGENTS: readonly Agent[] = [];
+const EMPTY_WORKTREES: readonly Worktree[] = [];
 
 const FOUNDATION_TEXT = `# QuietMem Editor Foundation
 
-QTM-004A establishes the Monaco surface inside the workspace shell.
+QTM-004B wires the editor shell to active worktree context.
 
-- File tree source: QTM-004B
+- Tree source: connected from the selected agent's active worktree
 - File open binding: QTM-004D
 - Multi-tab state: QTM-004E
 - Save flow: QTM-004F
 
-This buffer is intentionally local to the UI foundation ticket.`;
+This buffer remains local until file open/save lands.`;
+
+const REVIEW_TREE_SOURCE: WorktreeTreeSource = {
+  worktreeId: "eval-wt-1",
+  rootPath: "/tmp/eval/wt-phase-2c",
+  nodes: [
+    {
+      name: "src",
+      relativePath: "src",
+      kind: "directory",
+      children: [
+        {
+          name: "main.tsx",
+          relativePath: "src/main.tsx",
+          kind: "file",
+          children: [],
+        },
+        {
+          name: "tabs",
+          relativePath: "src/tabs",
+          kind: "directory",
+          children: [
+            {
+              name: "EditorTab.tsx",
+              relativePath: "src/tabs/EditorTab.tsx",
+              kind: "file",
+              children: [],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: "README.md",
+      relativePath: "README.md",
+      kind: "file",
+      children: [],
+    },
+  ],
+};
 
 const configureMonaco: BeforeMount = (monaco) => {
   monaco.editor.defineTheme("quietmem", {
@@ -45,41 +91,232 @@ const configureMonaco: BeforeMount = (monaco) => {
   });
 };
 
+const reviewMode =
+  typeof window !== "undefined" &&
+  (window as unknown as { __UI_REVIEW__?: boolean }).__UI_REVIEW__ === true;
+
+const toErrorMessage = (err: unknown): string => {
+  if (typeof err === "object" && err !== null) {
+    const maybe = err as Partial<AppErrorPayload>;
+    if (typeof maybe.message === "string") {
+      return maybe.message;
+    }
+  }
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  return "unknown error";
+};
+
+function TreePreview({
+  nodes,
+  level = 0,
+}: {
+  nodes: readonly FileTreeNode[];
+  level?: number;
+}) {
+  return (
+    <ul className={styles.treeList} data-level={level}>
+      {nodes.map((node) => (
+        <li key={node.relativePath} className={styles.treeItem}>
+          <div className={styles.treeRow} data-kind={node.kind}>
+            <span className={styles.treeMarker} aria-hidden="true">
+              {node.kind === "directory" ? "dir" : "file"}
+            </span>
+            <span className={styles.treeName}>{node.name}</span>
+          </div>
+          {node.children.length > 0 ? (
+            <TreePreview nodes={node.children} level={level + 1} />
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function EditorTab() {
+  const selectedProjectId = useProjectStore((state) => state.selectedProjectId);
+  const projects = useProjectStore((state) => state.projects);
+  const selectedAgentId = useUiStore((state) => state.selectedAgentId);
+  const worktrees = useAgentStore((state) =>
+    selectedProjectId
+      ? (state.worktreesByProject[selectedProjectId] ?? EMPTY_WORKTREES)
+      : EMPTY_WORKTREES,
+  );
+  const agents = useAgentStore((state) =>
+    selectedProjectId
+      ? (state.agentsByProject[selectedProjectId] ?? EMPTY_AGENTS)
+      : EMPTY_AGENTS,
+  );
+  const refreshWorktrees = useAgentStore((state) => state.refreshWorktrees);
+
+  const [treeSource, setTreeSource] = useState<WorktreeTreeSource | null>(null);
+  const [treeLoading, setTreeLoading] = useState(false);
+  const [treeError, setTreeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedProjectId) {
+      void refreshWorktrees(selectedProjectId);
+    }
+  }, [selectedProjectId, refreshWorktrees]);
+
+  const selectedProject = useMemo(
+    () => projects.find((project) => project.id === selectedProjectId) ?? null,
+    [projects, selectedProjectId],
+  );
+  const selectedAgent = useMemo(
+    () => agents.find((agent) => agent.id === selectedAgentId) ?? null,
+    [agents, selectedAgentId],
+  );
+  const activeWorktree = useMemo(
+    () =>
+      selectedAgent?.activeWorktreeId
+        ? (worktrees.find((worktree) => worktree.id === selectedAgent.activeWorktreeId) ??
+          null)
+        : null,
+    [selectedAgent, worktrees],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!selectedAgent?.activeWorktreeId) {
+      setTreeSource(null);
+      setTreeError(null);
+      setTreeLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (reviewMode && selectedAgent.activeWorktreeId === REVIEW_TREE_SOURCE.worktreeId) {
+      setTreeSource(REVIEW_TREE_SOURCE);
+      setTreeError(null);
+      setTreeLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setTreeLoading(true);
+    setTreeError(null);
+
+    void worktreeService
+      .getFileTree(selectedAgent.activeWorktreeId)
+      .then((nextTreeSource) => {
+        if (cancelled) return;
+        setTreeSource(nextTreeSource);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setTreeSource(null);
+        setTreeError(toErrorMessage(err));
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setTreeLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedAgent?.activeWorktreeId]);
+
+  const treeNodeCount = useMemo(() => {
+    const countNodes = (nodes: readonly FileTreeNode[]): number =>
+      nodes.reduce((sum, node) => sum + 1 + countNodes(node.children), 0);
+    return treeSource ? countNodes(treeSource.nodes) : 0;
+  }, [treeSource]);
+
+  const status = selectedProjectId === null
+    ? {
+        label: "No Project",
+        text: "Project を選択すると editor の worktree 文脈を解決できます。",
+      }
+    : selectedAgentId === null
+      ? {
+          label: "No Agent",
+          text: "Editor は selected agent の active worktree を基準に tree source を決めます。",
+        }
+      : selectedAgent === null
+        ? {
+            label: "Agent Missing",
+            text: "選択中 agent が現在の project から見つかりません。",
+          }
+        : selectedAgent.activeWorktreeId === null
+          ? {
+              label: "No Worktree",
+              text: "Overview の Agent 編集で active worktree を設定すると tree source が有効になります。",
+            }
+          : treeLoading
+            ? {
+                label: "Loading",
+                text: "active worktree から file tree source を取得しています。",
+              }
+            : treeError
+              ? {
+                  label: "Source Error",
+                  text: treeError,
+                }
+              : {
+                  label: "Tree Ready",
+                  text:
+                    treeSource?.rootPath ??
+                    "active worktree から file tree source を取得済みです。",
+                };
+
   return (
     <div className={styles.root}>
       <aside className={styles.sidebar}>
-        <div className={styles.eyebrow}>Editor Foundation</div>
-        <h2 className={styles.title}>静かに書くための Monaco surface</h2>
+        <div className={styles.eyebrow}>Worktree Context</div>
+        <h2 className={styles.title}>active worktree を editor 文脈へ接続</h2>
         <p className={styles.description}>
-          QTM-004A では workspace shell に Monaco を載せる最小構成だけを実装します。
-          worktree 参照、file tree、open/save は後続 ticket で接続します。
+          QTM-004B では selected agent の active worktree から file tree source を取得します。
+          file open と操作 UI は後続 ticket で接続します。
         </p>
 
         <section className={styles.section}>
-          <h3 className={styles.sectionTitle}>Current State</h3>
+          <h3 className={styles.sectionTitle}>Context</h3>
           <ul className={styles.list}>
-            <li>Monaco editor is mounted and theme-configured.</li>
-            <li>No worktree binding is required for this ticket.</li>
-            <li>The editor is ready to accept opened file content later.</li>
+            <li>{selectedProject ? `project: ${selectedProject.name}` : "project: —"}</li>
+            <li>{selectedAgent ? `agent: ${selectedAgent.name}` : "agent: —"}</li>
+            <li>
+              {activeWorktree
+                ? `worktree: ${activeWorktree.branchName}`
+                : "worktree: —"}
+            </li>
+            <li>{activeWorktree ? `root: ${activeWorktree.path}` : "root: —"}</li>
           </ul>
         </section>
 
         <section className={styles.section}>
-          <h3 className={styles.sectionTitle}>Next Tickets</h3>
+          <h3 className={styles.sectionTitle}>MVP Policy</h3>
           <ul className={styles.list}>
-            <li>QTM-004B: worktree context and tree source</li>
-            <li>QTM-004D: file open and language binding</li>
-            <li>QTM-004E/F: tabs, dirty state, and save flow</li>
+            <li>source は agent.activeWorktreeId を唯一の基準にする</li>
+            <li>hidden entries と `.git` / `node_modules` / `dist` / `target` を除外する</li>
+            <li>directories first で静的 preview を返し、file open はまだ行わない</li>
           </ul>
         </section>
 
+        <section className={styles.section}>
+          <h3 className={styles.sectionTitle}>Tree Preview</h3>
+          {treeSource ? (
+            <div className={styles.treePanel}>
+              <div className={styles.treeMeta}>
+                <span>{treeNodeCount} nodes</span>
+                <span>{treeSource.rootPath}</span>
+              </div>
+              <TreePreview nodes={treeSource.nodes} />
+            </div>
+          ) : (
+            <p className={styles.placeholderText}>
+              worktree source が解決されると、ここに非インタラクティブな tree preview を表示します。
+            </p>
+          )}
+        </section>
+
         <div className={styles.statusCard}>
-          <span className={styles.statusLabel}>Disconnected</span>
-          <p className={styles.statusText}>
-            File tree is not wired yet. The editor currently hosts a local
-            foundation buffer so the shell and Monaco lifecycle can be verified.
-          </p>
+          <span className={styles.statusLabel}>{status.label}</span>
+          <p className={styles.statusText}>{status.text}</p>
         </div>
       </aside>
 
@@ -89,7 +326,11 @@ function EditorTab() {
             <div className={styles.editorLabel}>Buffer</div>
             <div className={styles.editorTitle}>foundation/notes.md</div>
           </div>
-          <div className={styles.editorMeta}>Monaco · markdown · local seed</div>
+          <div className={styles.editorMeta}>
+            {activeWorktree
+              ? `Monaco · markdown · ${activeWorktree.branchName}`
+              : "Monaco · markdown · local seed"}
+          </div>
         </div>
         <div className={styles.editorFrame}>
           <Editor
