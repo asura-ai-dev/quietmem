@@ -47,6 +47,39 @@
   overflow-wrap: anywhere;
 }
 
+/* task-2D02: 複製ボタン (header 右側) */
+.formHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.duplicateButton {
+  padding: var(--space-1) var(--space-3);
+  background: transparent;
+  color: var(--accent-attention);
+  border: 1px solid var(--accent-attention);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease;
+}
+
+.duplicateButton:hover:not(:disabled) {
+  background: var(--accent-attention);
+  color: var(--color-gray-900);
+}
+
+.duplicateButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .fieldGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;

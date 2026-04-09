@@ -103,6 +103,29 @@
   border-color: #c46a6a;
 }
 
+.select {
+  width: 100%;
+  padding: 10px var(--space-3);
+  background: var(--bg-app);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--fg-primary);
+  font-size: var(--font-size-base);
+  appearance: auto;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+.select:hover {
+  border-color: var(--color-gray-400);
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
 .hint {
   font-size: 10px;
   font-family: var(--font-mono);

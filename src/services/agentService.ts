@@ -9,6 +9,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   Agent,
   AgentCreateInput,
+  AgentDuplicateInput,
   AgentUpdateInput,
 } from "../types/bindings";
 
@@ -19,6 +20,8 @@ const agentService = {
     invoke<Agent[]>("agent_list_by_project", { projectId }),
   update: (input: AgentUpdateInput): Promise<Agent> =>
     invoke<Agent>("agent_update", { input }),
+  duplicate: (input: AgentDuplicateInput): Promise<Agent> =>
+    invoke<Agent>("agent_duplicate", { input }),
 } as const;
 
 export { agentService };

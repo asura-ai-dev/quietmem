@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useAgentStore } from "../../store/agentStore";
 import type { Agent, Worktree } from "../../types/bindings";
+import AgentStatusBadge from "./AgentStatusBadge";
 import styles from "./AgentList.module.css";
 
 // Stable empty-array constants shared across renders. Returning a freshly
@@ -92,9 +93,9 @@ function AgentList({ projectId, selectedAgentId, onSelect }: AgentListProps) {
               }
             >
               <span className={styles.itemName}>{agent.name}</span>
-              <span className={styles.itemStatus} data-status={agent.status}>
-                {agent.status}
-              </span>
+              <div className={styles.itemStatusCell}>
+                <AgentStatusBadge status={agent.status} size="md" />
+              </div>
               <span className={styles.itemRole}>{agent.role}</span>
               <span className={styles.itemAdapter}>{agent.adapterType}</span>
               <span className={styles.itemWorktree}>

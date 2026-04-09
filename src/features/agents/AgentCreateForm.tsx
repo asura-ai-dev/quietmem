@@ -1,6 +1,7 @@
 import { useId, useState, type FormEvent } from "react";
 import { useAgentStore } from "../../store/agentStore";
-import type { Agent } from "../../types/bindings";
+import type { Agent, AgentStatus } from "../../types/bindings";
+import { AGENT_STATUS_LABELS, AGENT_STATUS_VALUES } from "./agentStatus";
 import styles from "./AgentCreateForm.module.css";
 
 /**
@@ -37,7 +38,6 @@ interface FieldErrors {
 }
 
 const DEFAULT_ADAPTER_TYPE = "cli";
-const DEFAULT_STATUS = "idle";
 
 function AgentCreateForm({ projectId, onCreated }: AgentCreateFormProps) {
   const createAgent = useAgentStore((state) => state.createAgent);
@@ -57,7 +57,7 @@ function AgentCreateForm({ projectId, onCreated }: AgentCreateFormProps) {
   const [adapterType, setAdapterType] = useState(DEFAULT_ADAPTER_TYPE);
   const [promptPath, setPromptPath] = useState("");
   const [configPath, setConfigPath] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState<AgentStatus>("idle");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   // Server error shown after a submit attempt. Cleared on edit.
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -88,7 +88,7 @@ function AgentCreateForm({ projectId, onCreated }: AgentCreateFormProps) {
     setAdapterType(DEFAULT_ADAPTER_TYPE);
     setPromptPath("");
     setConfigPath("");
-    setStatus("");
+    setStatus("idle");
     setFieldErrors({});
   };
 
@@ -105,7 +105,6 @@ function AgentCreateForm({ projectId, onCreated }: AgentCreateFormProps) {
 
     const trimmedPromptPath = promptPath.trim();
     const trimmedConfigPath = configPath.trim();
-    const trimmedStatus = status.trim();
 
     try {
       const agent = await createAgent({
@@ -115,7 +114,9 @@ function AgentCreateForm({ projectId, onCreated }: AgentCreateFormProps) {
         adapterType: adapterType.trim(),
         promptPath: trimmedPromptPath.length > 0 ? trimmedPromptPath : null,
         configPath: trimmedConfigPath.length > 0 ? trimmedConfigPath : null,
-        status: trimmedStatus.length > 0 ? trimmedStatus : DEFAULT_STATUS,
+        // status は select で必ず AgentStatus の有効値が入っているため
+        // trim や fallback は不要。
+        status,
       });
       resetForm();
       onCreated?.(agent);
@@ -246,20 +247,24 @@ function AgentCreateForm({ projectId, onCreated }: AgentCreateFormProps) {
           <label className={styles.label} htmlFor={statusId}>
             Status
           </label>
-          <input
+          <select
             id={statusId}
-            type="text"
-            className={styles.input}
+            className={styles.select}
             value={status}
             onChange={(e) => {
-              setStatus(e.target.value);
+              setStatus(e.target.value as AgentStatus);
               clearSubmitError();
             }}
-            placeholder={DEFAULT_STATUS}
             aria-describedby={statusHintId}
-          />
+          >
+            {AGENT_STATUS_VALUES.map((v) => (
+              <option key={v} value={v}>
+                {AGENT_STATUS_LABELS[v]}
+              </option>
+            ))}
+          </select>
           <span id={statusHintId} className={styles.hint}>
-            省略時 "{DEFAULT_STATUS}"
+            作成直後の状態 (デフォルト: idle)
           </span>
         </div>
 

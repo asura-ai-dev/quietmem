@@ -1,93 +1,91 @@
-# QuietMem Phase 1 フェーズ計画
+# QuietMem Phase 2 フェーズ計画 (QTM-003 Agent Management UI)
 
-Phase 1 (QTM-001 + QTM-002) を 6 つのサブフェーズに分解する。各サブフェーズは前段の成果物に依存するが、同一サブフェーズ内のチケットは原則として前の番号のチケットにのみ依存する。
+Phase 2 を 4 つのサブフェーズ (2A / 2B / 2C / 2D) に分解する。バックエンドを先に固め、フロントエンドの基盤 (型 / service / store / トークン) を整え、UI コンポーネントは最後に強化する。
+
+入力 spec: `agent-docs/spec.md`
+詳細設計: `agent-docs/phase-2-architecture.md`, `phase-2-status-enum.md`, `agent-duplicate-design.md`, `phase-2-ui-design.md`
 
 ## 全体依存
 
 ```
-Phase 1A (プロジェクト基盤)
-   └─> Phase 1B (SQLite データ層)
-         └─> Phase 1C (Tauri commands)
-               └─> Phase 1D (フロントエンド基盤)
-                     └─> Phase 1E (Workspace Shell)
-                           └─> Phase 1F (Project / Agent / Worktree UI + 統合)
+Phase 2A (Backend: status enum + agent_duplicate)
+   └─> Phase 2B (Frontend Foundation: bindings + service + store + tokens)
+         └─> Phase 2C (UI Enhancement: status select + status badge + LeftSidebar 統合)
+               └─> Phase 2D (Duplicate UI + 結合 Smoke)
 ```
 
-Phase 1D は Phase 1C と直列依存ではなく、厳密には Phase 1A 完了時点で着手可能。ただし services 層の型 (bindings.ts) は Phase 1C で確定する DTO と一致させる必要があるため、Phase 1D 内で `bindings.ts` を書くチケットは Phase 1C 完了後に着手する。
+各サブフェーズの最後に `cargo test --lib` (2A) / `pnpm tsc --noEmit && pnpm build` (2B/2C/2D) を通すチケットを含む。
 
-## Phase 1A: プロジェクト基盤
+---
 
-Tauri + React + Vite + TypeScript の初期化と Hello World 起動確認。
+## Phase 2A: バックエンド (status enum + duplicate)
 
-- `task-1A01` : Tauri プロジェクトスケルトン生成 (Cargo / src-tauri / tauri.conf.json)
-- `task-1A02` : Vite + React + TS + pnpm フロントエンド雛形生成
-- `task-1A03` : 起動確認用の最小 `main.tsx` / `App.tsx` と tauri.conf の window 設定
-- `task-1A04` : `AppState` 骨格 + `AppPaths` (`src-tauri/src/paths.rs`) + 起動時 `ensure_base()`
+Rust 側の status バリデーション基盤と `agent_duplicate` を実装する。フロントには触れない。Rust 単体テストで担保する。
 
-依存: なし (task-1A01 は最初のチケット)
+| Task ID   | 名前                                                                | 依存                 |
+| --------- | ------------------------------------------------------------------- | -------------------- |
+| task-2A01 | `AgentStatus` ホワイトリスト + バリデータ追加                       | なし                 |
+| task-2A02 | `agent_create` / `agent_update` への status 検証組み込み            | task-2A01            |
+| task-2A03 | `AgentDuplicateInput` DTO 追加 (Rust)                               | task-2A01            |
+| task-2A04 | `repo::agent::duplicate` 実装 + 単体テスト                          | task-2A03            |
+| task-2A05 | `agent_duplicate` Tauri command + invoke_handler 登録               | task-2A04            |
+| task-2A06 | Phase 2A 検証 (`cargo test --lib` / `cargo build` / `cargo clippy`) | task-2A02, task-2A05 |
 
-## Phase 1B: SQLite データ層
+依存元: Phase 1 完了 (Phase 1F の Phase 7 final status pass)
 
-rusqlite + 自前マイグレーション runner + 6 テーブル + repo 層 + 単体テスト。
+---
 
-- `task-1B01` : rusqlite と依存 crate 追加、`db/connection.rs` (WAL / FK ON)
-- `task-1B02` : マイグレーション runner (`db/migration.rs`) + `schema_migrations` 表
-- `task-1B03` : `001_init.sql` に 6 テーブル定義を書く
-- `task-1B04` : `db/repo/project.rs` (create / list / update) + テスト
-- `task-1B05` : `db/repo/agent.rs` (create / list_by_project / update) + テスト
-- `task-1B06` : `db/repo/worktree.rs` (create / list_by_project / update) + テスト
-- `task-1B07` : 起動時の DB 初期化 (`AppState` に接続を保持) + テーブル存在 smoke テスト
+## Phase 2B: フロントエンド基盤 (bindings + service + store + tokens)
 
-依存: Phase 1A 完了
+Phase 2A で追加したバックエンド API に対応する型 / service / store と、`tokens.css` に danger 色を追加する。UI コンポーネントにはまだ触れない。
 
-## Phase 1C: Tauri commands
+| Task ID   | 名前                                                                         | 依存            |
+| --------- | ---------------------------------------------------------------------------- | --------------- |
+| task-2B01 | `bindings.ts` に `AgentStatus` / `AgentDuplicateInput` 追加 + 定数モジュール | task-2A06       |
+| task-2B02 | `agentService.duplicate(...)` 追加                                           | task-2B01       |
+| task-2B03 | `agentStore.duplicateAgent(...)` 追加                                        | task-2B02       |
+| task-2B04 | `tokens.css` に `--color-danger` 系 + status alias 追加                      | なし            |
+| task-2B05 | `uiStore` に `selectedAgentId` 昇格 (action 含む)                            | task-2B01       |
+| task-2B06 | Phase 2B 検証 (`pnpm tsc --noEmit` / `pnpm build`)                           | task-2B01..2B05 |
 
-projects / agents / worktrees の CRUD を Tauri commands として公開。
+---
 
-- `task-1C01` : `commands/mod.rs` + `AppError` + `AppResult` (`error.rs`)
-- `task-1C02` : `commands/project.rs` (project_create / project_list / project_update)
-- `task-1C03` : `commands/agent.rs` (agent_create / agent_list_by_project / agent_update)
-- `task-1C04` : `commands/worktree.rs` (worktree_create / worktree_list_by_project / worktree_update)
-- `task-1C05` : `tauri::Builder::invoke_handler` への登録 + `app_state.rs` の共有
+## Phase 2C: UI 強化 (status select + status badge + LeftSidebar 統合)
 
-依存: Phase 1B 完了
+既存 UI コンポーネントの status を `<select>` に置き換え、共通 `AgentStatusBadge` を導入し、LeftSidebar Agents セクションを実 Agent 一覧に置き換える。複製 UI には触れない。
 
-## Phase 1D: フロントエンド基盤
+| Task ID   | 名前                                                                              | 依存                 |
+| --------- | --------------------------------------------------------------------------------- | -------------------- |
+| task-2C01 | `AgentStatusBadge` コンポーネント新規作成                                         | task-2B04            |
+| task-2C02 | `AgentList` の status 表示を `AgentStatusBadge` に置換                            | task-2C01            |
+| task-2C03 | `AgentCreateForm` の status を `<select>` 化 (定数連携)                           | task-2B01            |
+| task-2C04 | `AgentEditForm` の status を `<select>` 化                                        | task-2B01            |
+| task-2C05 | `LeftSidebar` Agents セクションを実 Agent 一覧に置換 (uiStore 経由)               | task-2B05, task-2C01 |
+| task-2C06 | `OverviewTab` の `selectedAgentId` を uiStore に切り替え                          | task-2B05            |
+| task-2C07 | Phase 2C 検証 (`pnpm tsc --noEmit` / `pnpm build`) + 視覚 smoke (4 status バッジ) | task-2C02..2C06      |
 
-TypeScript 型ミラー、services 層、zustand store、デザイントークン。
+---
 
-- `task-1D01` : `src/types/bindings.ts` (Rust DTO と 1:1 の TS 型)
-- `task-1D02` : `src/services/projectService.ts` / `agentService.ts` / `worktreeService.ts`
-- `task-1D03` : `src/store/uiStore.ts` (route / activeTab / drawerOpen / drawerTab)
-- `task-1D04` : `src/store/projectStore.ts` / `agentStore.ts` (ドメインキャッシュ)
-- `task-1D05` : `src/styles/tokens.css` + `global.css` + `main.tsx` へ読み込み
+## Phase 2D: 複製 UI + 結合 Smoke
 
-依存: Phase 1C 完了 (bindings.ts 生成のため)
+複製ボタン / 確認ダイアログ / 統合 Smoke。Phase 2 の最後で全フローを通す。
 
-## Phase 1E: Workspace Shell
+| Task ID   | 名前                                                              | 依存                 |
+| --------- | ----------------------------------------------------------------- | -------------------- |
+| task-2D01 | `AgentDuplicateConfirm` コンポーネント新規作成                    | task-2C01, task-2B03 |
+| task-2D02 | `AgentEditForm` に複製ボタン + Confirm 統合                       | task-2D01, task-2C04 |
+| task-2D03 | Phase 2D 結合 Smoke チケット (手動 Smoke Flow + 再起動後保持確認) | task-2D02, task-2C07 |
 
-5 領域レイアウト、MainTabs 切替、別画面 (Dashboard / Settings / FirstRun) 経路。
+---
 
-- `task-1E01` : `WorkspaceRoute` + grid レイアウト + `ShellBody`
-- `task-1E02` : `Header` / `LeftSidebar` (最小) / `RightPanel` (3 セクション)
-- `task-1E03` : `MainTabs` (5 タブ切替 + プレースホルダ中身)
-- `task-1E04` : `BottomDrawer` (開閉 + 4 タブ)
-- `task-1E05` : `FirstRunRoute` / `DashboardRoute` / `SettingsRoute` + `App.tsx` ルーティング分岐
+## サマリ
 
-依存: Phase 1D 完了
+- 合計サブフェーズ: 4 (2A / 2B / 2C / 2D)
+- 合計チケット: 22 (2A: 6, 2B: 6, 2C: 7, 2D: 3)
+- バックエンド先行で 6 チケット → フロント基盤 6 チケット → UI 強化 7 チケット → 複製 UI + Smoke 3 チケット
+- 各サブフェーズの最後にビルド/テスト確認チケットを配置 (2A06 / 2B06 / 2C07 / 2D03)
+- 評価チケット (Phase 7) は本 phases ファイルには含めず、orchestrator が Phase 2.5 で TaskCreate する
 
-## Phase 1F: Project / Agent / Worktree UI + 統合
+## 完了条件
 
-Overview タブ内の実 UI と Tauri commands 接続、Smoke Flow の通し。
-
-- `task-1F01` : `ProjectList` + `ProjectCreateForm` + `projectService` 接続
-- `task-1F02` : `AgentList` + `AgentCreateForm` + `agentService` 接続
-- `task-1F03` : `WorktreeList` + `WorktreeCreateForm` + `worktreeService` 接続
-- `task-1F04` : `AgentEditForm` で `activeWorktreeId` を Worktree 一覧から選択可能にする
-- `task-1F05` : 統合 Smoke: 初回セットアップ → Project 作成 → Overview で Agent/Worktree 作成 → active_worktree_id 反映 → 再起動確認
-
-依存: Phase 1E 完了
-
-## フェーズ完了判定
-
-各サブフェーズに属する全チケットの `done_when` が満たされたら次のサブフェーズへ進む。Smoke Flow の最終確認は `task-1F05` で実施する。
+各サブフェーズに属する全チケットの `done_when` が満たされたら次サブフェーズに進む。最終 Smoke は task-2D03 で実施し、QuietMem アプリ起動 → Project 選択 → Agent 作成 → 複製 → status 編集 → active worktree 紐付け → 再起動後保持を手動で全通しする。

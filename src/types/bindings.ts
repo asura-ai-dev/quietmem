@@ -32,6 +32,19 @@ export interface ProjectUpdateInput {
   rootPath?: string;
 }
 
+/**
+ * Agent.status の有効値ホワイトリスト型。
+ *
+ * Rust 側 `domain::agent::AGENT_STATUS_VALUES` と 1:1 で対応する。
+ * - "idle":         初期状態 / 静止中
+ * - "running":      実行中
+ * - "error":        エラー停止中
+ * - "needs_input":  ユーザー入力待ち
+ *
+ * 参照: agent-docs/phase-2-status-enum.md
+ */
+export type AgentStatus = "idle" | "running" | "error" | "needs_input";
+
 export interface Agent {
   id: string;
   projectId: string;
@@ -40,7 +53,8 @@ export interface Agent {
   adapterType: string;
   promptPath: string | null;
   configPath: string | null;
-  status: string;
+  // 前方互換のためユニオンで許容 (DB に既存範囲外値が残るケース対策)
+  status: AgentStatus | string;
   activeWorktreeId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -53,7 +67,8 @@ export interface AgentCreateInput {
   adapterType: string;
   promptPath?: string | null;
   configPath?: string | null;
-  status?: string;
+  // 厳格化: 自由文字列は受け付けない
+  status?: AgentStatus;
 }
 
 export interface AgentUpdateInput {
@@ -63,8 +78,21 @@ export interface AgentUpdateInput {
   adapterType?: string;
   promptPath?: string | null;
   configPath?: string | null;
-  status?: string;
+  status?: AgentStatus;
   activeWorktreeId?: string | null;
+}
+
+/**
+ * `agent_duplicate` Tauri command の入力。
+ *
+ * - sourceAgentId: 元 Agent の id
+ * - name: 省略時は Rust 側で `<元 name> (copy)` を生成する
+ *
+ * 参照: agent-docs/agent-duplicate-design.md
+ */
+export interface AgentDuplicateInput {
+  sourceAgentId: string;
+  name?: string | null;
 }
 
 export interface Worktree {
