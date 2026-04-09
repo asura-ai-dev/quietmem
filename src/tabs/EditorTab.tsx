@@ -15,6 +15,13 @@ import styles from "./EditorTab.module.css";
 
 const EMPTY_AGENTS: readonly Agent[] = [];
 const EMPTY_WORKTREES: readonly Worktree[] = [];
+const FOUNDATION_PATH = "foundation/notes.md";
+
+type EditorOpenTab = {
+  path: string;
+  savedContent: string;
+  currentContent: string;
+};
 
 const FOUNDATION_TEXT = `# QuietMem Editor Foundation
 
@@ -227,8 +234,8 @@ function EditorTab() {
   const [treeLoading, setTreeLoading] = useState(false);
   const [treeError, setTreeError] = useState<string | null>(null);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
-  const [openedFilePath, setOpenedFilePath] = useState<string | null>(null);
-  const [editorValue, setEditorValue] = useState(FOUNDATION_TEXT);
+  const [openTabs, setOpenTabs] = useState<EditorOpenTab[]>([]);
+  const [activeTabPath, setActiveTabPath] = useState<string | null>(null);
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
 
@@ -264,8 +271,8 @@ function EditorTab() {
       setTreeLoading(false);
       setExpandedPaths(new Set());
       setPendingOpenFilePath(null);
-      setOpenedFilePath(null);
-      setEditorValue(FOUNDATION_TEXT);
+      setOpenTabs([]);
+      setActiveTabPath(null);
       setFileError(null);
       setFileLoading(false);
       return () => {
@@ -350,10 +357,12 @@ function EditorTab() {
   useEffect(() => {
     let cancelled = false;
 
-    if (!selectedAgent?.activeWorktreeId || !pendingOpenFilePath || !availableFilePaths.has(pendingOpenFilePath)) {
+    if (
+      !selectedAgent?.activeWorktreeId ||
+      !pendingOpenFilePath ||
+      !availableFilePaths.has(pendingOpenFilePath)
+    ) {
       if (!pendingOpenFilePath) {
-        setOpenedFilePath(null);
-        setEditorValue(FOUNDATION_TEXT);
         setFileError(null);
         setFileLoading(false);
       }
@@ -362,7 +371,10 @@ function EditorTab() {
       };
     }
 
-    if (openedFilePath === pendingOpenFilePath) {
+    const existingTab = openTabs.find((tab) => tab.path === pendingOpenFilePath);
+    if (existingTab) {
+      setActiveTabPath(existingTab.path);
+      setPendingOpenFilePath(null);
       setFileError(null);
       setFileLoading(false);
       return () => {
@@ -387,13 +399,23 @@ function EditorTab() {
     void loadPromise
       .then((openedFile) => {
         if (cancelled) return;
-        setOpenedFilePath(openedFile.relativePath);
-        setEditorValue(openedFile.content);
+        const nextTab: EditorOpenTab = {
+          path: openedFile.relativePath,
+          savedContent: openedFile.content,
+          currentContent: openedFile.content,
+        };
+        setOpenTabs((current) => {
+          if (current.some((tab) => tab.path === nextTab.path)) {
+            return current;
+          }
+          return [...current, nextTab];
+        });
+        setActiveTabPath(openedFile.relativePath);
+        setPendingOpenFilePath(null);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setOpenedFilePath(null);
-        setEditorValue(FOUNDATION_TEXT);
+        setPendingOpenFilePath(null);
         setFileError(toErrorMessage(err));
       })
       .finally(() => {
@@ -404,7 +426,7 @@ function EditorTab() {
     return () => {
       cancelled = true;
     };
-  }, [availableFilePaths, openedFilePath, pendingOpenFilePath, selectedAgent?.activeWorktreeId]);
+  }, [availableFilePaths, openTabs, pendingOpenFilePath, selectedAgent?.activeWorktreeId, setPendingOpenFilePath]);
 
   const treeNodeCount = useMemo(() => {
     const countNodes = (nodes: readonly FileTreeNode[]): number =>
@@ -425,7 +447,7 @@ function EditorTab() {
   };
 
   const handleSelectFile = (path: string) => {
-    if (path === pendingOpenFilePath && path === openedFilePath) {
+    if (path === activeTabPath) {
       return;
     }
 
@@ -446,6 +468,48 @@ function EditorTab() {
       return next;
     });
   };
+
+  const handleActivateTab = (path: string) => {
+    setActiveTabPath(path);
+    setFileError(null);
+    setPendingOpenFilePath(null);
+  };
+
+  const handleCloseTab = (path: string) => {
+    const index = openTabs.findIndex((tab) => tab.path === path);
+    if (index === -1) {
+      return;
+    }
+
+    const fallbackTab = openTabs[index + 1] ?? openTabs[index - 1] ?? null;
+    setOpenTabs((current) => current.filter((tab) => tab.path !== path));
+    if (activeTabPath === path) {
+      setActiveTabPath(fallbackTab?.path ?? null);
+    }
+    if (pendingOpenFilePath === path) {
+      setPendingOpenFilePath(null);
+    }
+    setFileError(null);
+  };
+
+  const handleEditorChange = (nextValue: string | undefined) => {
+    if (!activeTabPath) {
+      return;
+    }
+    const normalizedValue = nextValue ?? "";
+    setOpenTabs((current) =>
+      current.map((tab) =>
+        tab.path === activeTabPath ? { ...tab, currentContent: normalizedValue } : tab,
+      ),
+    );
+  };
+
+  const activeTab = activeTabPath
+    ? openTabs.find((tab) => tab.path === activeTabPath) ?? null
+    : null;
+  const activeTabIsDirty = activeTab
+    ? activeTab.currentContent !== activeTab.savedContent
+    : false;
 
   const status = selectedProjectId === null
     ? {
@@ -483,14 +547,16 @@ function EditorTab() {
                     text: `${pendingOpenFilePath ?? "selected file"} を読み込んでいます。`,
                   }
                 : fileError
-                  ? {
-                      label: "Open Error",
-                      text: fileError,
-                    }
-                  : openedFilePath
+              ? {
+                  label: "Open Error",
+                  text: fileError,
+                }
+              : activeTab
                 ? {
-                    label: "File Open",
-                    text: `${openedFilePath} を editor に読み込みました。`,
+                    label: activeTabIsDirty ? "Dirty" : "File Open",
+                    text: activeTabIsDirty
+                      ? `${activeTab.path} に未保存の変更があります。`
+                      : `${activeTab.path} を editor に読み込みました。`,
                   }
               : {
                   label: "Tree Ready",
@@ -499,16 +565,17 @@ function EditorTab() {
                     "active worktree から file tree source を取得済みです。",
                 };
 
-  const editorPath = openedFilePath ?? "foundation/notes.md";
-  const editorLanguage = inferMonacoLanguage(openedFilePath);
-  const bufferTitle = openedFilePath ?? pendingOpenFilePath ?? "foundation/notes.md";
-  const editorMeta = openedFilePath
-    ? `Monaco · ${editorLanguage} · ${openedFilePath}`
+  const editorPath = activeTab?.path ?? FOUNDATION_PATH;
+  const editorLanguage = inferMonacoLanguage(activeTab?.path ?? null);
+  const bufferTitle = activeTab?.path ?? pendingOpenFilePath ?? FOUNDATION_PATH;
+  const editorMeta = activeTab
+    ? `Monaco · ${editorLanguage} · ${activeTab.path} · ${activeTabIsDirty ? "dirty" : "saved"}`
     : pendingOpenFilePath
       ? `Monaco · opening · ${pendingOpenFilePath}`
       : activeWorktree
         ? `Monaco · markdown · ${activeWorktree.branchName}`
       : "Monaco · markdown · local seed";
+  const editorValue = activeTab?.currentContent ?? FOUNDATION_TEXT;
 
   return (
     <div className={styles.root}>
@@ -532,7 +599,8 @@ function EditorTab() {
             </li>
             <li>{activeWorktree ? `root: ${activeWorktree.path}` : "root: —"}</li>
             <li>{pendingOpenFilePath ? `pending: ${pendingOpenFilePath}` : "pending: —"}</li>
-            <li>{openedFilePath ? `opened: ${openedFilePath}` : "opened: —"}</li>
+            <li>{activeTab ? `active: ${activeTab.path}` : "active: —"}</li>
+            <li>{`tabs: ${openTabs.length}`}</li>
           </ul>
         </section>
 
@@ -556,7 +624,7 @@ function EditorTab() {
               <TreePreview
                 nodes={treeSource.nodes}
                 expandedPaths={expandedPaths}
-                selectedFilePath={pendingOpenFilePath}
+                selectedFilePath={activeTabPath}
                 onToggleDirectory={handleToggleDirectory}
                 onSelectFile={handleSelectFile}
               />
@@ -575,6 +643,46 @@ function EditorTab() {
       </aside>
 
       <section className={styles.editorPane} aria-label="Editor foundation">
+        <div className={styles.editorTabs} aria-label="Editor file tabs">
+          {openTabs.length > 0 ? (
+            openTabs.map((tab) => {
+              const isDirty = tab.currentContent !== tab.savedContent;
+              const isActive = tab.path === activeTabPath;
+
+              return (
+                <div
+                  key={tab.path}
+                  className={styles.editorTabChip}
+                  data-active={isActive}
+                >
+                  <button
+                    type="button"
+                    className={styles.editorTabButton}
+                    aria-pressed={isActive}
+                    onClick={() => handleActivateTab(tab.path)}
+                  >
+                    <span className={styles.editorTabName}>
+                      {tab.path.split("/").at(-1) ?? tab.path}
+                    </span>
+                    {isDirty ? (
+                      <span className={styles.editorDirtyMark} aria-label="Unsaved changes" />
+                    ) : null}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.editorTabClose}
+                    aria-label={`${tab.path} を閉じる`}
+                    onClick={() => handleCloseTab(tab.path)}
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })
+          ) : (
+            <div className={styles.editorEmptyTabs}>Open files will appear here.</div>
+          )}
+        </div>
         <div className={styles.editorHeader}>
           <div>
             <div className={styles.editorLabel}>Buffer</div>
@@ -589,6 +697,7 @@ function EditorTab() {
             path={editorPath}
             language={editorLanguage}
             value={editorValue}
+            onChange={handleEditorChange}
             theme="quietmem"
             options={{
               automaticLayout: true,
