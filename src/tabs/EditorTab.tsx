@@ -18,14 +18,14 @@ const EMPTY_WORKTREES: readonly Worktree[] = [];
 
 const FOUNDATION_TEXT = `# QuietMem Editor Foundation
 
-QTM-004B wires the editor shell to active worktree context.
+QTM-004D wires file open into the editor shell.
 
 - Tree source: connected from the selected agent's active worktree
-- File open binding: QTM-004D
+- File open binding: connected
 - Multi-tab state: QTM-004E
 - Save flow: QTM-004F
 
-This buffer remains local until file open/save lands.`;
+Select a text file from the tree to load it here.`;
 
 const REVIEW_TREE_SOURCE: WorktreeTreeSource = {
   worktreeId: "eval-wt-1",
@@ -64,6 +64,14 @@ const REVIEW_TREE_SOURCE: WorktreeTreeSource = {
       children: [],
     },
   ],
+};
+
+const REVIEW_FILE_CONTENTS: Record<string, string> = {
+  "README.md": "# QuietMem\n\nReview mode sample README.\n",
+  "src/main.tsx":
+    "export function bootstrap() {\n  return \"review-mode\";\n}\n",
+  "src/tabs/EditorTab.tsx":
+    "export const reviewMode = true;\n// QTM-004D sample content\n",
 };
 
 const configureMonaco: BeforeMount = (monaco) => {
@@ -105,6 +113,34 @@ const toErrorMessage = (err: unknown): string => {
   if (err instanceof Error) return err.message;
   if (typeof err === "string") return err;
   return "unknown error";
+};
+
+const inferMonacoLanguage = (path: string | null): string => {
+  if (!path) return "markdown";
+
+  const normalizedPath = path.toLowerCase();
+  const segments = normalizedPath.split("/");
+  const fileName = segments[segments.length - 1];
+
+  if (fileName === "dockerfile") return "dockerfile";
+  if (fileName.endsWith(".d.ts")) return "typescript";
+  if (fileName === "package.json" || fileName.endsWith(".json")) return "json";
+  if (fileName.endsWith(".md")) return "markdown";
+  if (fileName.endsWith(".tsx")) return "typescript";
+  if (fileName.endsWith(".ts")) return "typescript";
+  if (fileName.endsWith(".jsx")) return "javascript";
+  if (fileName.endsWith(".js") || fileName.endsWith(".mjs") || fileName.endsWith(".cjs")) {
+    return "javascript";
+  }
+  if (fileName.endsWith(".rs")) return "rust";
+  if (fileName.endsWith(".py")) return "python";
+  if (fileName.endsWith(".sh")) return "shell";
+  if (fileName.endsWith(".css")) return "css";
+  if (fileName.endsWith(".html")) return "html";
+  if (fileName.endsWith(".yml") || fileName.endsWith(".yaml")) return "yaml";
+  if (fileName.endsWith(".xml")) return "xml";
+
+  return "plaintext";
 };
 
 function TreePreview({
@@ -191,6 +227,10 @@ function EditorTab() {
   const [treeLoading, setTreeLoading] = useState(false);
   const [treeError, setTreeError] = useState<string | null>(null);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+  const [openedFilePath, setOpenedFilePath] = useState<string | null>(null);
+  const [editorValue, setEditorValue] = useState(FOUNDATION_TEXT);
+  const [fileLoading, setFileLoading] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedProjectId) {
@@ -224,6 +264,10 @@ function EditorTab() {
       setTreeLoading(false);
       setExpandedPaths(new Set());
       setPendingOpenFilePath(null);
+      setOpenedFilePath(null);
+      setEditorValue(FOUNDATION_TEXT);
+      setFileError(null);
+      setFileLoading(false);
       return () => {
         cancelled = true;
       };
@@ -303,6 +347,65 @@ function EditorTab() {
     }
   }, [availableFilePaths, pendingOpenFilePath, setPendingOpenFilePath]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!selectedAgent?.activeWorktreeId || !pendingOpenFilePath || !availableFilePaths.has(pendingOpenFilePath)) {
+      if (!pendingOpenFilePath) {
+        setOpenedFilePath(null);
+        setEditorValue(FOUNDATION_TEXT);
+        setFileError(null);
+        setFileLoading(false);
+      }
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (openedFilePath === pendingOpenFilePath) {
+      setFileError(null);
+      setFileLoading(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setFileLoading(true);
+    setFileError(null);
+
+    const loadPromise =
+      reviewMode && selectedAgent.activeWorktreeId === REVIEW_TREE_SOURCE.worktreeId
+        ? Promise.resolve({
+            worktreeId: REVIEW_TREE_SOURCE.worktreeId,
+            relativePath: pendingOpenFilePath,
+            content:
+              REVIEW_FILE_CONTENTS[pendingOpenFilePath] ??
+              `// Review mode stub for ${pendingOpenFilePath}\n`,
+          })
+        : worktreeService.getFileContent(selectedAgent.activeWorktreeId, pendingOpenFilePath);
+
+    void loadPromise
+      .then((openedFile) => {
+        if (cancelled) return;
+        setOpenedFilePath(openedFile.relativePath);
+        setEditorValue(openedFile.content);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setOpenedFilePath(null);
+        setEditorValue(FOUNDATION_TEXT);
+        setFileError(toErrorMessage(err));
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setFileLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [availableFilePaths, openedFilePath, pendingOpenFilePath, selectedAgent?.activeWorktreeId]);
+
   const treeNodeCount = useMemo(() => {
     const countNodes = (nodes: readonly FileTreeNode[]): number =>
       nodes.reduce((sum, node) => sum + 1 + countNodes(node.children), 0);
@@ -322,6 +425,10 @@ function EditorTab() {
   };
 
   const handleSelectFile = (path: string) => {
+    if (path === pendingOpenFilePath && path === openedFilePath) {
+      return;
+    }
+
     setPendingOpenFilePath(path);
 
     const segments = path.split("/");
@@ -370,10 +477,20 @@ function EditorTab() {
                   label: "Source Error",
                   text: treeError,
                 }
-              : pendingOpenFilePath
+              : fileLoading
                 ? {
-                    label: "Open Intent Ready",
-                    text: `${pendingOpenFilePath} を次の open file 対象として保持しています。内容読込は QTM-004D で接続します。`,
+                    label: "Opening File",
+                    text: `${pendingOpenFilePath ?? "selected file"} を読み込んでいます。`,
+                  }
+                : fileError
+                  ? {
+                      label: "Open Error",
+                      text: fileError,
+                    }
+                  : openedFilePath
+                ? {
+                    label: "File Open",
+                    text: `${openedFilePath} を editor に読み込みました。`,
                   }
               : {
                   label: "Tree Ready",
@@ -382,11 +499,15 @@ function EditorTab() {
                     "active worktree から file tree source を取得済みです。",
                 };
 
-  const bufferTitle = pendingOpenFilePath ?? "foundation/notes.md";
-  const editorMeta = pendingOpenFilePath
-    ? `Monaco · pending open · ${pendingOpenFilePath}`
-    : activeWorktree
-      ? `Monaco · markdown · ${activeWorktree.branchName}`
+  const editorPath = openedFilePath ?? "foundation/notes.md";
+  const editorLanguage = inferMonacoLanguage(openedFilePath);
+  const bufferTitle = openedFilePath ?? pendingOpenFilePath ?? "foundation/notes.md";
+  const editorMeta = openedFilePath
+    ? `Monaco · ${editorLanguage} · ${openedFilePath}`
+    : pendingOpenFilePath
+      ? `Monaco · opening · ${pendingOpenFilePath}`
+      : activeWorktree
+        ? `Monaco · markdown · ${activeWorktree.branchName}`
       : "Monaco · markdown · local seed";
 
   return (
@@ -395,8 +516,8 @@ function EditorTab() {
         <div className={styles.eyebrow}>Worktree Context</div>
         <h2 className={styles.title}>active worktree を editor 文脈へ接続</h2>
         <p className={styles.description}>
-          QTM-004C では selected agent の active worktree を interactive file tree に変えます。
-          file content の読込と editor binding は後続 ticket で接続します。
+          QTM-004D では selected agent の active worktree から選択ファイルを読み込み、
+          Monaco の buffer / path / language を open file に揃えます。
         </p>
 
         <section className={styles.section}>
@@ -411,6 +532,7 @@ function EditorTab() {
             </li>
             <li>{activeWorktree ? `root: ${activeWorktree.path}` : "root: —"}</li>
             <li>{pendingOpenFilePath ? `pending: ${pendingOpenFilePath}` : "pending: —"}</li>
+            <li>{openedFilePath ? `opened: ${openedFilePath}` : "opened: —"}</li>
           </ul>
         </section>
 
@@ -419,7 +541,7 @@ function EditorTab() {
           <ul className={styles.list}>
             <li>source は agent.activeWorktreeId を唯一の基準にする</li>
             <li>hidden entries と `.git` / `node_modules` / `dist` / `target` を除外する</li>
-            <li>directory toggle と file select を先に実装し、file content はまだ読まない</li>
+            <li>open は UTF-8 text file のみを扱い、非対応形式は error として返す</li>
           </ul>
         </section>
 
@@ -464,8 +586,9 @@ function EditorTab() {
           <Editor
             beforeMount={configureMonaco}
             defaultLanguage="markdown"
-            defaultPath="foundation/notes.md"
-            defaultValue={FOUNDATION_TEXT}
+            path={editorPath}
+            language={editorLanguage}
+            value={editorValue}
             theme="quietmem"
             options={{
               automaticLayout: true,

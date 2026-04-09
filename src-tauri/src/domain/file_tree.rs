@@ -24,3 +24,11 @@ pub struct WorktreeTreeSource {
     pub root_path: String,
     pub nodes: Vec<FileTreeNode>,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorktreeFileContent {
+    pub worktree_id: String,
+    pub relative_path: String,
+    pub content: String,
+}
