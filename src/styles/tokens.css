@@ -20,6 +20,11 @@
   --color-amber-500: #d99a2b;
   --color-amber-700: #a06d12;
 
+  /* Red (danger) — Phase 2 で導入 */
+  --color-red-300: #f08a8a;
+  --color-red-500: #d04848;
+  --color-red-700: #8e2828;
+
   /* Semantic aliases */
   --bg-app: var(--color-gray-900);
   --bg-surface: var(--color-gray-800);
@@ -29,6 +34,9 @@
   --accent-primary: var(--color-sage-500);
   --accent-primary-hover: var(--color-sage-400);
   --accent-attention: var(--color-amber-500);
+  --color-danger: var(--color-red-500);
+  --color-danger-strong: var(--color-red-700);
+  --color-danger-bg: var(--color-red-700);
   --border-subtle: var(--color-gray-600);
 
   /* Spacing */

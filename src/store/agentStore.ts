@@ -17,6 +17,7 @@ import { worktreeService } from "../services/worktreeService";
 import type {
   Agent,
   AgentCreateInput,
+  AgentDuplicateInput,
   AgentUpdateInput,
   AppErrorPayload,
   Worktree,
@@ -47,6 +48,7 @@ export interface AgentState {
   refreshAgents: (projectId: string) => Promise<void>;
   createAgent: (input: AgentCreateInput) => Promise<Agent>;
   updateAgent: (input: AgentUpdateInput) => Promise<Agent>;
+  duplicateAgent: (input: AgentDuplicateInput) => Promise<Agent>;
 
   // Actions (Worktrees)
   refreshWorktrees: (projectId: string) => Promise<void>;
@@ -90,6 +92,19 @@ export const useAgentStore = create<AgentState>()((set, get) => ({
     try {
       const agent = await agentService.update(input);
       // update input は projectId を持たないため、返却された agent の projectId で再取得
+      await get().refreshAgents(agent.projectId);
+      return agent;
+    } catch (err) {
+      set({ loading: false, error: toErrorMessage(err) });
+      throw err;
+    }
+  },
+
+  duplicateAgent: async (input) => {
+    set({ loading: true, error: null });
+    try {
+      const agent = await agentService.duplicate(input);
+      // 戻り値の projectId で対応 project の一覧を再取得
       await get().refreshAgents(agent.projectId);
       return agent;
     } catch (err) {

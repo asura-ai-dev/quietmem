@@ -21,6 +21,7 @@ export interface UiState {
   activeTab: MainTabKey;
   drawerOpen: boolean;
   drawerTab: DrawerTabKey;
+  selectedAgentId: string | null;
 
   // Actions
   setRoute: (route: Route) => void;
@@ -28,6 +29,7 @@ export interface UiState {
   toggleDrawer: () => void;
   setDrawerOpen: (open: boolean) => void;
   setDrawerTab: (tab: DrawerTabKey) => void;
+  setSelectedAgentId: (id: string | null) => void;
 }
 
 /**
@@ -39,16 +41,21 @@ export interface UiState {
  * - activeTab: "overview"
  * - drawerOpen: false
  * - drawerTab: "logs"
+ * - selectedAgentId: null (起動直後は何も選択していない。
+ *   Phase 2C で LeftSidebar Agents セクションと OverviewTab の編集フォームから
+ *   同一の真実源として参照される)
  */
 export const useUiStore = create<UiState>()((set) => ({
   route: "workspace",
   activeTab: "overview",
   drawerOpen: false,
   drawerTab: "logs",
+  selectedAgentId: null,
 
   setRoute: (route) => set({ route }),
   setActiveTab: (activeTab) => set({ activeTab }),
   toggleDrawer: () => set((state) => ({ drawerOpen: !state.drawerOpen })),
   setDrawerOpen: (drawerOpen) => set({ drawerOpen }),
   setDrawerTab: (drawerTab) => set({ drawerTab }),
+  setSelectedAgentId: (selectedAgentId) => set({ selectedAgentId }),
 }));
