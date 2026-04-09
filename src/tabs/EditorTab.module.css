@@ -135,11 +135,43 @@
   flex-direction: column;
 }
 
-.treeRow {
+.treeButton {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    transform 120ms ease;
+}
+
+.treeButton:hover {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.treeButton:focus-visible {
+  outline: none;
+  border-color: rgba(111, 143, 106, 0.42);
+}
+
+.treeButton[data-selected="true"] {
+  background: rgba(111, 143, 106, 0.16);
+  border-color: rgba(111, 143, 106, 0.3);
+}
+
+.treeChevron {
+  flex: 0 0 12px;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
 }
 
 .treeMarker {
@@ -154,12 +186,12 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
-.treeRow[data-kind="directory"] .treeMarker {
+.treeButton[data-kind="directory"] .treeMarker {
   color: var(--color-sage-100);
   background: rgba(111, 143, 106, 0.18);
 }
 
-.treeRow[data-kind="file"] .treeMarker {
+.treeButton[data-kind="file"] .treeMarker {
   color: var(--color-amber-300);
   background: rgba(217, 154, 43, 0.12);
 }
