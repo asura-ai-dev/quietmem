@@ -109,26 +109,62 @@ const toErrorMessage = (err: unknown): string => {
 
 function TreePreview({
   nodes,
+  expandedPaths,
+  selectedFilePath,
+  onToggleDirectory,
+  onSelectFile,
   level = 0,
 }: {
   nodes: readonly FileTreeNode[];
+  expandedPaths: ReadonlySet<string>;
+  selectedFilePath: string | null;
+  onToggleDirectory: (path: string) => void;
+  onSelectFile: (path: string) => void;
   level?: number;
 }) {
   return (
     <ul className={styles.treeList} data-level={level}>
-      {nodes.map((node) => (
-        <li key={node.relativePath} className={styles.treeItem}>
-          <div className={styles.treeRow} data-kind={node.kind}>
-            <span className={styles.treeMarker} aria-hidden="true">
-              {node.kind === "directory" ? "dir" : "file"}
-            </span>
-            <span className={styles.treeName}>{node.name}</span>
-          </div>
-          {node.children.length > 0 ? (
-            <TreePreview nodes={node.children} level={level + 1} />
-          ) : null}
-        </li>
-      ))}
+      {nodes.map((node) => {
+        const isDirectory = node.kind === "directory";
+        const isExpanded = isDirectory && expandedPaths.has(node.relativePath);
+        const isSelected = !isDirectory && selectedFilePath === node.relativePath;
+
+        return (
+          <li key={node.relativePath} className={styles.treeItem}>
+            <button
+              type="button"
+              className={styles.treeButton}
+              data-kind={node.kind}
+              data-selected={isSelected}
+              aria-expanded={isDirectory ? isExpanded : undefined}
+              aria-pressed={!isDirectory ? isSelected : undefined}
+              onClick={() =>
+                isDirectory
+                  ? onToggleDirectory(node.relativePath)
+                  : onSelectFile(node.relativePath)
+              }
+            >
+              <span className={styles.treeChevron} aria-hidden="true">
+                {isDirectory ? (isExpanded ? "▾" : "▸") : "·"}
+              </span>
+              <span className={styles.treeMarker} aria-hidden="true">
+                {isDirectory ? "dir" : "file"}
+              </span>
+              <span className={styles.treeName}>{node.name}</span>
+            </button>
+            {isDirectory && isExpanded && node.children.length > 0 ? (
+              <TreePreview
+                nodes={node.children}
+                expandedPaths={expandedPaths}
+                selectedFilePath={selectedFilePath}
+                onToggleDirectory={onToggleDirectory}
+                onSelectFile={onSelectFile}
+                level={level + 1}
+              />
+            ) : null}
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -137,6 +173,8 @@ function EditorTab() {
   const selectedProjectId = useProjectStore((state) => state.selectedProjectId);
   const projects = useProjectStore((state) => state.projects);
   const selectedAgentId = useUiStore((state) => state.selectedAgentId);
+  const pendingOpenFilePath = useUiStore((state) => state.pendingOpenFilePath);
+  const setPendingOpenFilePath = useUiStore((state) => state.setPendingOpenFilePath);
   const worktrees = useAgentStore((state) =>
     selectedProjectId
       ? (state.worktreesByProject[selectedProjectId] ?? EMPTY_WORKTREES)
@@ -152,6 +190,7 @@ function EditorTab() {
   const [treeSource, setTreeSource] = useState<WorktreeTreeSource | null>(null);
   const [treeLoading, setTreeLoading] = useState(false);
   const [treeError, setTreeError] = useState<string | null>(null);
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (selectedProjectId) {
@@ -183,6 +222,8 @@ function EditorTab() {
       setTreeSource(null);
       setTreeError(null);
       setTreeLoading(false);
+      setExpandedPaths(new Set());
+      setPendingOpenFilePath(null);
       return () => {
         cancelled = true;
       };
@@ -197,6 +238,7 @@ function EditorTab() {
       };
     }
 
+    setPendingOpenFilePath(null);
     setTreeLoading(true);
     setTreeError(null);
 
@@ -210,6 +252,8 @@ function EditorTab() {
         if (cancelled) return;
         setTreeSource(null);
         setTreeError(toErrorMessage(err));
+        setExpandedPaths(new Set());
+        setPendingOpenFilePath(null);
       })
       .finally(() => {
         if (cancelled) return;
@@ -219,13 +263,82 @@ function EditorTab() {
     return () => {
       cancelled = true;
     };
-  }, [selectedAgent?.activeWorktreeId]);
+  }, [selectedAgent?.activeWorktreeId, setPendingOpenFilePath]);
+
+  useEffect(() => {
+    if (!treeSource) {
+      setExpandedPaths(new Set());
+      return;
+    }
+
+    setExpandedPaths(
+      new Set(
+        treeSource.nodes
+          .filter((node) => node.kind === "directory")
+          .map((node) => node.relativePath),
+      ),
+    );
+  }, [treeSource]);
+
+  const availableFilePaths = useMemo(() => {
+    const paths = new Set<string>();
+    const visit = (nodes: readonly FileTreeNode[]) => {
+      nodes.forEach((node) => {
+        if (node.kind === "file") {
+          paths.add(node.relativePath);
+          return;
+        }
+        visit(node.children);
+      });
+    };
+    if (treeSource) {
+      visit(treeSource.nodes);
+    }
+    return paths;
+  }, [treeSource]);
+
+  useEffect(() => {
+    if (pendingOpenFilePath && !availableFilePaths.has(pendingOpenFilePath)) {
+      setPendingOpenFilePath(null);
+    }
+  }, [availableFilePaths, pendingOpenFilePath, setPendingOpenFilePath]);
 
   const treeNodeCount = useMemo(() => {
     const countNodes = (nodes: readonly FileTreeNode[]): number =>
       nodes.reduce((sum, node) => sum + 1 + countNodes(node.children), 0);
     return treeSource ? countNodes(treeSource.nodes) : 0;
   }, [treeSource]);
+
+  const handleToggleDirectory = (path: string) => {
+    setExpandedPaths((current) => {
+      const next = new Set(current);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectFile = (path: string) => {
+    setPendingOpenFilePath(path);
+
+    const segments = path.split("/");
+    if (segments.length <= 1) {
+      return;
+    }
+
+    setExpandedPaths((current) => {
+      const next = new Set(current);
+      const parents: string[] = [];
+      for (let index = 0; index < segments.length - 1; index += 1) {
+        parents.push(segments[index]);
+        next.add(parents.join("/"));
+      }
+      return next;
+    });
+  };
 
   const status = selectedProjectId === null
     ? {
@@ -257,6 +370,11 @@ function EditorTab() {
                   label: "Source Error",
                   text: treeError,
                 }
+              : pendingOpenFilePath
+                ? {
+                    label: "Open Intent Ready",
+                    text: `${pendingOpenFilePath} を次の open file 対象として保持しています。内容読込は QTM-004D で接続します。`,
+                  }
               : {
                   label: "Tree Ready",
                   text:
@@ -264,14 +382,21 @@ function EditorTab() {
                     "active worktree から file tree source を取得済みです。",
                 };
 
+  const bufferTitle = pendingOpenFilePath ?? "foundation/notes.md";
+  const editorMeta = pendingOpenFilePath
+    ? `Monaco · pending open · ${pendingOpenFilePath}`
+    : activeWorktree
+      ? `Monaco · markdown · ${activeWorktree.branchName}`
+      : "Monaco · markdown · local seed";
+
   return (
     <div className={styles.root}>
       <aside className={styles.sidebar}>
         <div className={styles.eyebrow}>Worktree Context</div>
         <h2 className={styles.title}>active worktree を editor 文脈へ接続</h2>
         <p className={styles.description}>
-          QTM-004B では selected agent の active worktree から file tree source を取得します。
-          file open と操作 UI は後続 ticket で接続します。
+          QTM-004C では selected agent の active worktree を interactive file tree に変えます。
+          file content の読込と editor binding は後続 ticket で接続します。
         </p>
 
         <section className={styles.section}>
@@ -285,6 +410,7 @@ function EditorTab() {
                 : "worktree: —"}
             </li>
             <li>{activeWorktree ? `root: ${activeWorktree.path}` : "root: —"}</li>
+            <li>{pendingOpenFilePath ? `pending: ${pendingOpenFilePath}` : "pending: —"}</li>
           </ul>
         </section>
 
@@ -293,7 +419,7 @@ function EditorTab() {
           <ul className={styles.list}>
             <li>source は agent.activeWorktreeId を唯一の基準にする</li>
             <li>hidden entries と `.git` / `node_modules` / `dist` / `target` を除外する</li>
-            <li>directories first で静的 preview を返し、file open はまだ行わない</li>
+            <li>directory toggle と file select を先に実装し、file content はまだ読まない</li>
           </ul>
         </section>
 
@@ -305,11 +431,17 @@ function EditorTab() {
                 <span>{treeNodeCount} nodes</span>
                 <span>{treeSource.rootPath}</span>
               </div>
-              <TreePreview nodes={treeSource.nodes} />
+              <TreePreview
+                nodes={treeSource.nodes}
+                expandedPaths={expandedPaths}
+                selectedFilePath={pendingOpenFilePath}
+                onToggleDirectory={handleToggleDirectory}
+                onSelectFile={handleSelectFile}
+              />
             </div>
           ) : (
             <p className={styles.placeholderText}>
-              worktree source が解決されると、ここに非インタラクティブな tree preview を表示します。
+              worktree source が解決されると、ここに展開可能な file tree を表示します。
             </p>
           )}
         </section>
@@ -324,13 +456,9 @@ function EditorTab() {
         <div className={styles.editorHeader}>
           <div>
             <div className={styles.editorLabel}>Buffer</div>
-            <div className={styles.editorTitle}>foundation/notes.md</div>
+            <div className={styles.editorTitle}>{bufferTitle}</div>
           </div>
-          <div className={styles.editorMeta}>
-            {activeWorktree
-              ? `Monaco · markdown · ${activeWorktree.branchName}`
-              : "Monaco · markdown · local seed"}
-          </div>
+          <div className={styles.editorMeta}>{editorMeta}</div>
         </div>
         <div className={styles.editorFrame}>
           <Editor

@@ -154,10 +154,10 @@ Depends on: QTM-004B
 - Goal
 - ユーザーが worktree 配下のファイルを辿って選択できる UI を成立させる
 - Checklist
-- [ ] file tree UI を実装する
-- [ ] フォルダ展開・折りたたみを実装する
-- [ ] ファイル選択時に open file アクションが発火するようにする
-- [ ] worktree 未選択時の empty state を表示する
+- [x] file tree UI を実装する
+- [x] フォルダ展開・折りたたみを実装する
+- [x] ファイル選択時に open file アクションが発火するようにする
+- [x] worktree 未選択時の empty state を表示する
 - Done
 - file tree を表示できる
 - ファイルクリックで open file アクションまで到達する

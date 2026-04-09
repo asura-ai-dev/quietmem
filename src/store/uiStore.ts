@@ -22,6 +22,7 @@ export interface UiState {
   drawerOpen: boolean;
   drawerTab: DrawerTabKey;
   selectedAgentId: string | null;
+  pendingOpenFilePath: string | null;
 
   // Actions
   setRoute: (route: Route) => void;
@@ -30,6 +31,7 @@ export interface UiState {
   setDrawerOpen: (open: boolean) => void;
   setDrawerTab: (tab: DrawerTabKey) => void;
   setSelectedAgentId: (id: string | null) => void;
+  setPendingOpenFilePath: (path: string | null) => void;
 }
 
 /**
@@ -44,6 +46,7 @@ export interface UiState {
  * - selectedAgentId: null (起動直後は何も選択していない。
  *   Phase 2C で LeftSidebar Agents セクションと OverviewTab の編集フォームから
  *   同一の真実源として参照される)
+ * - pendingOpenFilePath: null (QTM-004C で file tree click の open intent を保持する)
  */
 export const useUiStore = create<UiState>()((set) => ({
   route: "workspace",
@@ -51,6 +54,7 @@ export const useUiStore = create<UiState>()((set) => ({
   drawerOpen: false,
   drawerTab: "logs",
   selectedAgentId: null,
+  pendingOpenFilePath: null,
 
   setRoute: (route) => set({ route }),
   setActiveTab: (activeTab) => set({ activeTab }),
@@ -58,4 +62,5 @@ export const useUiStore = create<UiState>()((set) => ({
   setDrawerOpen: (drawerOpen) => set({ drawerOpen }),
   setDrawerTab: (drawerTab) => set({ drawerTab }),
   setSelectedAgentId: (selectedAgentId) => set({ selectedAgentId }),
+  setPendingOpenFilePath: (pendingOpenFilePath) => set({ pendingOpenFilePath }),
 }));
