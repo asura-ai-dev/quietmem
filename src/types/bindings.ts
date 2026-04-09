@@ -139,3 +139,9 @@ export interface WorktreeTreeSource {
   rootPath: string;
   nodes: FileTreeNode[];
 }
+
+export interface WorktreeFileContent {
+  worktreeId: string;
+  relativePath: string;
+  content: string;
+}
