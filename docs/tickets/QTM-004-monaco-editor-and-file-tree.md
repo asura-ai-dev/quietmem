@@ -123,10 +123,10 @@ Depends on: QTM-002
 - Goal
 - Monaco を workspace shell に載せられる最小構成を作る
 - Checklist
-- [ ] Monaco Editor 導入方針を確定する
-- [ ] editor 表示領域の責務と配置場所を決める
-- [ ] Monaco の初期化を行い、プレースホルダ表示を置き換える
-- [ ] テーマ、フォントサイズ、基本オプションを設定する
+- [x] Monaco Editor 導入方針を確定する
+- [x] editor 表示領域の責務と配置場所を決める
+- [x] Monaco の初期化を行い、プレースホルダ表示を置き換える
+- [x] テーマ、フォントサイズ、基本オプションを設定する
 - Done
 - Monaco ベースの editor ペインが表示される
 - worktree や file tree が未接続でも editor の土台が成立している

@@ -1,0 +1,168 @@
+.root {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top left, rgba(111, 143, 106, 0.12), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0));
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-8);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0)),
+    rgba(0, 0, 0, 0.08);
+}
+
+.eyebrow {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-sage-200);
+}
+
+.title {
+  font-size: 24px;
+  line-height: 1.25;
+  color: var(--fg-primary);
+}
+
+.description {
+  color: var(--fg-muted);
+  line-height: 1.7;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: 18px;
+  color: var(--fg-primary);
+  line-height: 1.6;
+}
+
+.statusCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding: var(--space-4);
+  border: 1px solid rgba(217, 154, 43, 0.24);
+  border-radius: var(--radius-md);
+  background: rgba(217, 154, 43, 0.08);
+}
+
+.statusLabel {
+  width: fit-content;
+  padding: 4px 8px;
+  border: 1px solid rgba(217, 154, 43, 0.35);
+  border-radius: 999px;
+  color: var(--color-amber-300);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.statusText {
+  color: var(--color-sage-50);
+  line-height: 1.6;
+}
+
+.editorPane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: var(--space-5);
+  gap: var(--space-4);
+}
+
+.editorHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: 0 var(--space-2);
+}
+
+.editorLabel {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.editorTitle {
+  margin-top: 6px;
+  font-size: 18px;
+  color: var(--fg-primary);
+}
+
+.editorMeta {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--fg-muted);
+}
+
+.editorFrame {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-lg);
+  background: #15181a;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 18px 40px rgba(0, 0, 0, 0.24);
+}
+
+.editorFrame :global(.monaco-editor),
+.editorFrame :global(.overflow-guard) {
+  border-radius: inherit;
+}
+
+@media (max-width: 960px) {
+  .root {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .statusCard {
+    margin-top: 0;
+  }
+
+  .editorPane {
+    min-height: 420px;
+  }
+
+  .editorHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

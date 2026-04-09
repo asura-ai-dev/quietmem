@@ -5,20 +5,20 @@
 //
 // 注意: worktree_list_by_project は引数 1 つのため `{ projectId }` をフラットに渡す。
 
-import { invoke } from "@tauri-apps/api/core";
 import type {
   Worktree,
   WorktreeCreateInput,
   WorktreeUpdateInput,
 } from "../types/bindings";
+import { safeInvoke } from "./tauri";
 
 const worktreeService = {
   create: (input: WorktreeCreateInput): Promise<Worktree> =>
-    invoke<Worktree>("worktree_create", { input }),
+    safeInvoke<Worktree>("worktree_create", { input }),
   listByProject: (projectId: string): Promise<Worktree[]> =>
-    invoke<Worktree[]>("worktree_list_by_project", { projectId }),
+    safeInvoke<Worktree[]>("worktree_list_by_project", { projectId }),
   update: (input: WorktreeUpdateInput): Promise<Worktree> =>
-    invoke<Worktree>("worktree_update", { input }),
+    safeInvoke<Worktree>("worktree_update", { input }),
 } as const;
 
 export { worktreeService };
