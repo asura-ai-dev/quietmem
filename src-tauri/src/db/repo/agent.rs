@@ -19,7 +19,9 @@ use chrono::Utc;
 use rusqlite::{params, Connection, OptionalExtension, Row};
 use uuid::Uuid;
 
-use crate::domain::agent::{Agent, AgentCreateInput, AgentUpdateInput};
+use crate::domain::agent::{
+    validate_agent_status, Agent, AgentCreateInput, AgentDuplicateInput, AgentUpdateInput,
+};
 use crate::error::{AppError, AppResult};
 
 /// `agents` の 1 行を `Agent` にマップする共通ヘルパ。
@@ -89,6 +91,7 @@ pub fn create(conn: &Connection, input: AgentCreateInput) -> AppResult<Agent> {
         .status
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "idle".to_string());
+    validate_agent_status(&status)?;
 
     let id = Uuid::now_v7().to_string();
     let now = Utc::now().to_rfc3339();
@@ -207,6 +210,7 @@ pub fn update(conn: &Connection, input: AgentUpdateInput) -> AppResult<Agent> {
         None => existing.config_path.clone(),
     };
     let new_status = input.status.unwrap_or_else(|| existing.status.clone());
+    validate_agent_status(&new_status)?;
     let new_active_worktree_id = match input.active_worktree_id {
         Some(v) => Some(v),
         None => existing.active_worktree_id.clone(),
@@ -251,6 +255,91 @@ pub fn update(conn: &Connection, input: AgentUpdateInput) -> AppResult<Agent> {
         created_at: existing.created_at,
         updated_at: new_updated_at,
     })
+}
+
+/// Agent を複製する。
+///
+/// 元 Agent (`input.source_agent_id`) の `project_id` / `role` / `adapter_type` /
+/// `prompt_path` / `config_path` を引き継ぎ、新 `id` / `created_at` / `updated_at` を採番する。
+///
+/// - `status` は強制的に `"idle"` で開始する (source の status は無視する)
+/// - `active_worktree_id` は強制的に `None` で開始する
+/// - `name` は `input.name` が `Some(raw)` なら `raw.trim()` を採用し、`None` なら
+///   `format!("{} (copy)", source.name)` を生成する
+/// - `raw_memory_entries` / `curated_memories` テーブルには一切触れない
+///   (= 複製時の「memory 非引継ぎ」は「memory テーブルに INSERT を行わない」ことで実現する。
+///   spec.md §5.3 参照)
+///
+/// 成功時は生成された新 Agent を返す。
+///
+/// # Errors
+///
+/// - `input.source_agent_id` に対応する行が存在しなければ `NotFound`
+/// - `input.name` が `Some` で trim 後に空なら `InvalidInput`
+pub fn duplicate(conn: &Connection, input: AgentDuplicateInput) -> AppResult<Agent> {
+    let source = find_by_id(conn, &input.source_agent_id)?
+        .ok_or_else(|| AppError::NotFound(format!("agent not found: {}", input.source_agent_id)))?;
+
+    let new_name = match input.name {
+        Some(raw) => {
+            let trimmed = raw.trim().to_string();
+            if trimmed.is_empty() {
+                return Err(AppError::InvalidInput("name must not be empty".into()));
+            }
+            trimmed
+        }
+        None => format!("{} (copy)", source.name),
+    };
+
+    // 複製時は必ず idle で開始する (spec.md §4.5 / §6)。
+    // source の status が running / error / needs_input でも常に idle に揃える。
+    let new_status = "idle".to_string();
+    validate_agent_status(&new_status)?;
+
+    let new_id = Uuid::now_v7().to_string();
+    let now = Utc::now().to_rfc3339();
+
+    let new_agent = Agent {
+        id: new_id,
+        project_id: source.project_id.clone(),
+        name: new_name,
+        role: source.role.clone(),
+        adapter_type: source.adapter_type.clone(),
+        prompt_path: source.prompt_path.clone(),
+        config_path: source.config_path.clone(),
+        status: new_status,
+        // 複製時は active_worktree_id を常に None にする (spec.md §4.5 / §6)。
+        // source が別 Worktree に紐付いていても引き継がない。
+        active_worktree_id: None,
+        created_at: now.clone(),
+        updated_at: now,
+    };
+
+    conn.execute(
+        "INSERT INTO agents (\
+             id, project_id, name, role, adapter_type, \
+             prompt_path, config_path, status, active_worktree_id, \
+             created_at, updated_at\
+         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+        params![
+            new_agent.id,
+            new_agent.project_id,
+            new_agent.name,
+            new_agent.role,
+            new_agent.adapter_type,
+            new_agent.prompt_path,
+            new_agent.config_path,
+            new_agent.status,
+            new_agent.active_worktree_id,
+            new_agent.created_at,
+            new_agent.updated_at,
+        ],
+    )?;
+
+    // memory テーブル (raw_memory_entries / curated_memories) には触れない。
+    // これが spec.md §5.3 の「複製時の memory 非引継ぎ」の実装である。
+
+    Ok(new_agent)
 }
 
 #[cfg(test)]
@@ -592,5 +681,381 @@ mod tests {
         assert_eq!(updated.created_at, created.created_at);
         // updated_at のみは更新される
         assert_ne!(updated.updated_at, created.updated_at);
+    }
+
+    /// 範囲外 status で create すると InvalidInput になること。
+    #[test]
+    fn create_with_invalid_status_returns_invalid_input() {
+        let conn = setup_db();
+        let project_id = create_project(&conn, "inv-status");
+        let err = create(
+            &conn,
+            AgentCreateInput {
+                project_id,
+                name: "X".into(),
+                role: None,
+                adapter_type: None,
+                prompt_path: None,
+                config_path: None,
+                status: Some("unknown_status".into()),
+            },
+        )
+        .expect_err("invalid status should fail");
+        assert!(
+            matches!(err, AppError::InvalidInput(_)),
+            "expected InvalidInput, got {:?}",
+            err
+        );
+    }
+
+    /// 4 値すべての status で create が成功すること。
+    #[test]
+    fn create_accepts_all_four_status_values() {
+        let conn = setup_db();
+        let project_id = create_project(&conn, "all-status");
+        for s in ["idle", "running", "error", "needs_input"] {
+            let result = create(
+                &conn,
+                AgentCreateInput {
+                    project_id: project_id.clone(),
+                    name: format!("Agent-{}", s),
+                    role: None,
+                    adapter_type: None,
+                    prompt_path: None,
+                    config_path: None,
+                    status: Some(s.into()),
+                },
+            );
+            assert!(result.is_ok(), "status {:?} should be accepted", s);
+            assert_eq!(result.unwrap().status, s);
+        }
+    }
+
+    /// 範囲外 status で update すると InvalidInput になること。
+    #[test]
+    fn update_with_invalid_status_returns_invalid_input() {
+        let conn = setup_db();
+        let project_id = create_project(&conn, "upd-inv");
+        let created = create(&conn, sample_input(&project_id, "X")).expect("create");
+        let err = update(
+            &conn,
+            AgentUpdateInput {
+                id: created.id,
+                name: None,
+                role: None,
+                adapter_type: None,
+                prompt_path: None,
+                config_path: None,
+                status: Some("nope".into()),
+                active_worktree_id: None,
+            },
+        )
+        .expect_err("invalid status should fail");
+        assert!(
+            matches!(err, AppError::InvalidInput(_)),
+            "expected InvalidInput, got {:?}",
+            err
+        );
+    }
+
+    /// update で status を `needs_input` に変更できること。
+    #[test]
+    fn update_accepts_needs_input_status() {
+        let conn = setup_db();
+        let project_id = create_project(&conn, "upd-ni");
+        let created = create(&conn, sample_input(&project_id, "X")).expect("create");
+        let updated = update(
+            &conn,
+            AgentUpdateInput {
+                id: created.id,
+                name: None,
+                role: None,
+                adapter_type: None,
+                prompt_path: None,
+                config_path: None,
+                status: Some("needs_input".into()),
+                active_worktree_id: None,
+            },
+        )
+        .expect("needs_input should be accepted");
+        assert_eq!(updated.status, "needs_input");
+    }
+
+    // ==================================================================
+    // duplicate tests (task-2A04)
+    // ==================================================================
+
+    /// duplicate は新 id / created_at を持ち、引き継ぎフィールドが一致し、
+    /// status / active_worktree_id は強制リセットされること。
+    #[test]
+    fn duplicate_returns_new_agent_with_copied_fields() {
+        let conn = setup_db();
+        let project_id = create_project(&conn, "dup-copy");
+        let source = create(
+            &conn,
+            AgentCreateInput {
+                project_id: project_id.clone(),
+                name: "Source Agent".into(),
+                role: Some("developer".into()),
+                adapter_type: Some("cli".into()),
+                prompt_path: Some("/tmp/prompt.md".into()),
+                config_path: Some("/tmp/config.json".into()),
+                status: Some("running".into()),
+            },
+        )
+        .expect("create source should succeed");
+
+        // id / created_at が確実に異なるように少し待つ (uuid v7 は時刻ベース)
+        std::thread::sleep(std::time::Duration::from_millis(10));
+
+        let duplicated = duplicate(
+            &conn,
+            AgentDuplicateInput {
+                source_agent_id: source.id.clone(),
+                name: None,
+            },
+        )
+        .expect("duplicate should succeed");
+
+        assert_ne!(duplicated.id, source.id, "id should be newly generated");
+        assert!(
+            duplicated.created_at >= source.created_at,
+            "duplicated.created_at should be >= source.created_at"
+        );
+        assert_eq!(duplicated.project_id, source.project_id);
+        assert_eq!(duplicated.role, source.role);
+        assert_eq!(duplicated.adapter_type, source.adapter_type);
+        assert_eq!(duplicated.prompt_path, source.prompt_path);
+        assert_eq!(duplicated.config_path, source.config_path);
+        // status は source が running でも強制 idle
+        assert_eq!(
+            duplicated.status, "idle",
+            "status must be forced to 'idle' on duplicate"
+        );
+        // active_worktree_id は None で開始
+        assert_eq!(
+            duplicated.active_worktree_id, None,
+            "active_worktree_id must be None on duplicate"
+        );
+        assert_eq!(
+            duplicated.created_at, duplicated.updated_at,
+            "on duplicate, created_at and updated_at should match"
+        );
+    }
+
+    /// name=None のとき `<元 name> (copy)` が生成されること。
+    #[test]
+    fn duplicate_default_name_appends_copy_suffix() {
+        let conn = setup_db();
+        let project_id = create_project(&conn, "dup-default");
+        let source =
+            create(&conn, sample_input(&project_id, "planner")).expect("create should succeed");
+
+        let duplicated = duplicate(
+            &conn,
+            AgentDuplicateInput {
+                source_agent_id: source.id.clone(),
+                name: None,
+            },
+        )
+        .expect("duplicate should succeed");
+
+        assert_eq!(duplicated.name, "planner (copy)");
+    }
+
+    /// name=Some(...) のとき入力値が採用されること、trim されること。
+    #[test]
+    fn duplicate_with_custom_name_uses_input() {
+        let conn = setup_db();
+        let project_id = create_project(&conn, "dup-custom");
+        let source =
+            create(&conn, sample_input(&project_id, "planner")).expect("create should succeed");
+
+        // そのまま入力
+        let dup_a = duplicate(
+            &conn,
+            AgentDuplicateInput {
+                source_agent_id: source.id.clone(),
+                name: Some("planner-2".into()),
+            },
+        )
+        .expect("duplicate should succeed");
+        assert_eq!(dup_a.name, "planner-2");
+
+        // 前後空白は trim される
+        let dup_b = duplicate(
+            &conn,
+            AgentDuplicateInput {
+                source_agent_id: source.id.clone(),
+                name: Some("  trim me  ".into()),
+            },
+        )
+        .expect("duplicate should succeed");
+        assert_eq!(dup_b.name, "trim me");
+    }
+
+    /// name=Some(" ") (trim 後空) のとき InvalidInput になること。
+    #[test]
+    fn duplicate_with_empty_custom_name_returns_invalid_input() {
+        let conn = setup_db();
+        let project_id = create_project(&conn, "dup-empty");
+        let source =
+            create(&conn, sample_input(&project_id, "planner")).expect("create should succeed");
+
+        let err = duplicate(
+            &conn,
+            AgentDuplicateInput {
+                source_agent_id: source.id,
+                name: Some(" ".into()),
+            },
+        )
+        .expect_err("empty custom name should fail");
+
+        assert!(
+            matches!(err, AppError::InvalidInput(_)),
+            "expected InvalidInput, got {:?}",
+            err
+        );
+    }
+
+    /// 存在しない source_agent_id のとき NotFound になること。
+    #[test]
+    fn duplicate_with_missing_source_returns_not_found() {
+        let conn = setup_db();
+
+        let err = duplicate(
+            &conn,
+            AgentDuplicateInput {
+                source_agent_id: "does-not-exist".into(),
+                name: None,
+            },
+        )
+        .expect_err("missing source should fail");
+
+        assert!(
+            matches!(err, AppError::NotFound(_)),
+            "expected NotFound, got {:?}",
+            err
+        );
+    }
+
+    /// duplicate は memory テーブル (raw_memory_entries / curated_memories) に
+    /// 一切触れないこと (COUNT 不変)。
+    #[test]
+    fn duplicate_does_not_touch_memory_tables() {
+        let conn = setup_db();
+        let project_id = create_project(&conn, "no-mem");
+        let source = create(&conn, sample_input(&project_id, "Source")).expect("create");
+
+        let raw_before: i64 = conn
+            .query_row("SELECT COUNT(*) FROM raw_memory_entries", [], |r| r.get(0))
+            .expect("count raw_memory_entries");
+        let curated_before: i64 = conn
+            .query_row("SELECT COUNT(*) FROM curated_memories", [], |r| r.get(0))
+            .expect("count curated_memories");
+
+        let _new = duplicate(
+            &conn,
+            AgentDuplicateInput {
+                source_agent_id: source.id.clone(),
+                name: None,
+            },
+        )
+        .expect("duplicate");
+
+        let raw_after: i64 = conn
+            .query_row("SELECT COUNT(*) FROM raw_memory_entries", [], |r| r.get(0))
+            .expect("count");
+        let curated_after: i64 = conn
+            .query_row("SELECT COUNT(*) FROM curated_memories", [], |r| r.get(0))
+            .expect("count");
+
+        assert_eq!(
+            raw_before, raw_after,
+            "raw_memory_entries should be unchanged"
+        );
+        assert_eq!(
+            curated_before, curated_after,
+            "curated_memories should be unchanged"
+        );
+    }
+
+    /// source が running でも duplicate 後は idle で開始すること。
+    #[test]
+    fn duplicate_starts_with_idle_status_even_if_source_was_running() {
+        let conn = setup_db();
+        let project_id = create_project(&conn, "dup-run");
+        let source = create(
+            &conn,
+            AgentCreateInput {
+                project_id: project_id.clone(),
+                name: "RunningSource".into(),
+                role: None,
+                adapter_type: None,
+                prompt_path: None,
+                config_path: None,
+                status: Some("running".into()),
+            },
+        )
+        .expect("create should succeed");
+        assert_eq!(source.status, "running", "source should be running");
+
+        let duplicated = duplicate(
+            &conn,
+            AgentDuplicateInput {
+                source_agent_id: source.id.clone(),
+                name: None,
+            },
+        )
+        .expect("duplicate should succeed");
+
+        assert_eq!(
+            duplicated.status, "idle",
+            "duplicated agent must start as idle"
+        );
+    }
+
+    /// source が active_worktree_id を持っていても duplicate 後は None であること。
+    #[test]
+    fn duplicate_starts_with_null_active_worktree_even_if_source_had_one() {
+        let conn = setup_db();
+        let project_id = create_project(&conn, "dup-wt");
+        let source = create(&conn, sample_input(&project_id, "WithWorktree"))
+            .expect("create should succeed");
+
+        // source に active_worktree_id を設定
+        let updated_source = update(
+            &conn,
+            AgentUpdateInput {
+                id: source.id.clone(),
+                name: None,
+                role: None,
+                adapter_type: None,
+                prompt_path: None,
+                config_path: None,
+                status: None,
+                active_worktree_id: Some("wt-xyz".into()),
+            },
+        )
+        .expect("update should succeed");
+        assert_eq!(
+            updated_source.active_worktree_id.as_deref(),
+            Some("wt-xyz"),
+            "source should now have active_worktree_id set"
+        );
+
+        let duplicated = duplicate(
+            &conn,
+            AgentDuplicateInput {
+                source_agent_id: source.id.clone(),
+                name: None,
+            },
+        )
+        .expect("duplicate should succeed");
+
+        assert_eq!(
+            duplicated.active_worktree_id, None,
+            "duplicated agent must start with active_worktree_id = None"
+        );
     }
 }

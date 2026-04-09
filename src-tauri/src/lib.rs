@@ -31,6 +31,7 @@ pub fn run() {
             commands::agent::agent_create,
             commands::agent::agent_list_by_project,
             commands::agent::agent_update,
+            commands::agent::agent_duplicate,
             commands::worktree::worktree_create,
             commands::worktree::worktree_list_by_project,
             commands::worktree::worktree_update,

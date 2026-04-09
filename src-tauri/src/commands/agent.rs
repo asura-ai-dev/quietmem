@@ -16,7 +16,7 @@ use tauri::State;
 
 use crate::app_state::AppState;
 use crate::db;
-use crate::domain::agent::{Agent, AgentCreateInput, AgentUpdateInput};
+use crate::domain::agent::{Agent, AgentCreateInput, AgentDuplicateInput, AgentUpdateInput};
 use crate::error::AppResult;
 
 /// Agent を作成する。
@@ -53,4 +53,19 @@ pub fn agent_list_by_project(
 #[tauri::command(rename_all = "camelCase")]
 pub fn agent_update(state: State<'_, AppState>, input: AgentUpdateInput) -> AppResult<Agent> {
     state.with_conn(|conn| db::repo::agent::update(conn, input))
+}
+
+/// Agent を複製する。
+///
+/// 元 Agent の `role` / `adapter_type` / `prompt_path` / `config_path` を引き継ぎ、
+/// 新 `id` / `created_at` / `updated_at` を採番する。
+/// `status` は強制的に `idle`、`active_worktree_id` は `null` で開始する。
+///
+/// memory テーブル (`raw_memory_entries` / `curated_memories`) には
+/// 一切書き込みを行わない (= 「memory 非引継ぎ」の実装)。
+///
+/// 参照: agent-docs/agent-duplicate-design.md
+#[tauri::command(rename_all = "camelCase")]
+pub fn agent_duplicate(state: State<'_, AppState>, input: AgentDuplicateInput) -> AppResult<Agent> {
+    state.with_conn(|conn| db::repo::agent::duplicate(conn, input))
 }
