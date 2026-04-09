@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import AgentCreateForm from "../features/agents/AgentCreateForm";
 import AgentEditForm from "../features/agents/AgentEditForm";
 import AgentList from "../features/agents/AgentList";
@@ -8,6 +8,7 @@ import WorktreeCreateForm from "../features/worktrees/WorktreeCreateForm";
 import WorktreeList from "../features/worktrees/WorktreeList";
 import { useAgentStore } from "../store/agentStore";
 import { useProjectStore } from "../store/projectStore";
+import { useUiStore } from "../store/uiStore";
 import type { Agent, Worktree } from "../types/bindings";
 import styles from "./OverviewTab.module.css";
 
@@ -68,8 +69,11 @@ function Section({ title, hint, disabled, children }: SectionProps) {
 
 function OverviewTab() {
   const selectedProjectId = useProjectStore((state) => state.selectedProjectId);
-  // 選択中 agent は Overview レベルで保持する (1F04 の AgentEditForm で使う)
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  // task-2C06: 選択中 agent は uiStore に昇格し、LeftSidebar Agents セクション
+  // (task-2C05) と OverviewTab の編集フォームで同一の真実源を共有する。
+  // 参照: spec.md §4.7 / §10, agent-docs/phase-2-ui-design.md §6
+  const selectedAgentId = useUiStore((state) => state.selectedAgentId);
+  const setSelectedAgentId = useUiStore((state) => state.setSelectedAgentId);
 
   // 1F04: AgentEditForm に渡す agent / worktrees を store から取得する
   const agentsForProject = useAgentStore((state) =>
@@ -84,9 +88,10 @@ function OverviewTab() {
   );
 
   // Project 切替時に選択中 agent をリセット (別 project の agent が選択に残らないように)
+  // setSelectedAgentId は zustand の action なので識別子は安定しているが、念のため deps に含める
   useEffect(() => {
     setSelectedAgentId(null);
-  }, [selectedProjectId]);
+  }, [selectedProjectId, setSelectedAgentId]);
 
   // 選択中 agent が削除/消失した場合にも state を掃除する
   useEffect(() => {
@@ -96,7 +101,7 @@ function OverviewTab() {
     ) {
       setSelectedAgentId(null);
     }
-  }, [selectedAgentId, agentsForProject]);
+  }, [selectedAgentId, agentsForProject, setSelectedAgentId]);
 
   const selectedAgent =
     selectedAgentId != null
@@ -110,7 +115,15 @@ function OverviewTab() {
         <ProjectCreateForm />
       </Section>
 
-      <Section title="Agents" disabled={!selectedProjectId}>
+      <Section
+        title="Agents"
+        hint={
+          selectedProjectId
+            ? `${agentsForProject.length} 件`
+            : undefined
+        }
+        disabled={!selectedProjectId}
+      >
         {selectedProjectId ? (
           <>
             <AgentList
