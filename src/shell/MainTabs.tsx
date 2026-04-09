@@ -114,7 +114,9 @@ function MainTabs() {
         })}
       </div>
       <div
-        className={styles.tabPanel}
+        className={`${styles.tabPanel} ${
+          activeTab === "editor" ? styles.tabPanelEditor : ""
+        }`}
         role="tabpanel"
         id={`main-tabpanel-${activeTab}`}
         aria-labelledby={`main-tab-${activeTab}`}

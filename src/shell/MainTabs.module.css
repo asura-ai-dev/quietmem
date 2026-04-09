@@ -63,3 +63,8 @@
   color: var(--fg-primary);
   background: var(--bg-app);
 }
+
+.tabPanelEditor {
+  overflow: hidden;
+  padding: 0;
+}

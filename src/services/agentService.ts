@@ -5,23 +5,23 @@
 //
 // 注意: agent_list_by_project は引数 1 つのため `{ projectId }` をフラットに渡す。
 
-import { invoke } from "@tauri-apps/api/core";
 import type {
   Agent,
   AgentCreateInput,
   AgentDuplicateInput,
   AgentUpdateInput,
 } from "../types/bindings";
+import { safeInvoke } from "./tauri";
 
 const agentService = {
   create: (input: AgentCreateInput): Promise<Agent> =>
-    invoke<Agent>("agent_create", { input }),
+    safeInvoke<Agent>("agent_create", { input }),
   listByProject: (projectId: string): Promise<Agent[]> =>
-    invoke<Agent[]>("agent_list_by_project", { projectId }),
+    safeInvoke<Agent[]>("agent_list_by_project", { projectId }),
   update: (input: AgentUpdateInput): Promise<Agent> =>
-    invoke<Agent>("agent_update", { input }),
+    safeInvoke<Agent>("agent_update", { input }),
   duplicate: (input: AgentDuplicateInput): Promise<Agent> =>
-    invoke<Agent>("agent_duplicate", { input }),
+    safeInvoke<Agent>("agent_duplicate", { input }),
 } as const;
 
 export { agentService };
