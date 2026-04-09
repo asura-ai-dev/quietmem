@@ -124,3 +124,18 @@ export interface WorktreeUpdateInput {
   baseBranch?: string;
   status?: string;
 }
+
+export type FileTreeNodeKind = "file" | "directory";
+
+export interface FileTreeNode {
+  name: string;
+  relativePath: string;
+  kind: FileTreeNodeKind;
+  children: FileTreeNode[];
+}
+
+export interface WorktreeTreeSource {
+  worktreeId: string;
+  rootPath: string;
+  nodes: FileTreeNode[];
+}

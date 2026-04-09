@@ -59,7 +59,19 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     set({ loading: true, error: null });
     try {
       const projects = await projectService.list();
-      set({ projects, loading: false });
+      set((state) => {
+        const hasCurrentSelection =
+          state.selectedProjectId !== null &&
+          projects.some((project) => project.id === state.selectedProjectId);
+
+        return {
+          projects,
+          selectedProjectId: hasCurrentSelection
+            ? state.selectedProjectId
+            : (projects[0]?.id ?? null),
+          loading: false,
+        };
+      });
     } catch (err) {
       set({ loading: false, error: toErrorMessage(err) });
     }

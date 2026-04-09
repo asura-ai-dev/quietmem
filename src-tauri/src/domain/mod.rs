@@ -8,5 +8,6 @@
 //! 参照: `agent-docs/tauri-commands.md` §DTO 型定義
 
 pub mod agent;
+pub mod file_tree;
 pub mod project;
 pub mod worktree;

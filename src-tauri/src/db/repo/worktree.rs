@@ -151,6 +151,11 @@ pub fn list_by_project(conn: &Connection, project_id: &str) -> AppResult<Vec<Wor
     Ok(worktrees)
 }
 
+/// 指定 id の Worktree を取得する。存在しない場合は `None` を返す。
+pub fn get_by_id(conn: &Connection, id: &str) -> AppResult<Option<Worktree>> {
+    find_by_id(conn, id)
+}
+
 /// 指定 id の Worktree を取得する (存在しなければ `None`)。
 fn find_by_id(conn: &Connection, id: &str) -> AppResult<Option<Worktree>> {
     let result = conn
