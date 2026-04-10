@@ -19,6 +19,7 @@
 
 use chrono::Utc;
 use rusqlite::{params, Connection, OptionalExtension, Row};
+use std::path::Path;
 use uuid::Uuid;
 
 use crate::domain::worktree::{Worktree, WorktreeCreateInput, WorktreeUpdateInput};
@@ -53,6 +54,23 @@ fn project_exists(conn: &Connection, project_id: &str) -> AppResult<bool> {
     Ok(found.is_some())
 }
 
+fn validate_worktree_path(path: &str) -> AppResult<()> {
+    let root = Path::new(path);
+    if !root.exists() {
+        return Err(AppError::InvalidInput(format!(
+            "worktree path does not exist: {}",
+            path
+        )));
+    }
+    if !root.is_dir() {
+        return Err(AppError::InvalidInput(format!(
+            "worktree path is not a directory: {}",
+            path
+        )));
+    }
+    Ok(())
+}
+
 /// Worktree を作成する。
 ///
 /// 成功時は生成された行 (uuid / created_at / updated_at が埋まった状態) を返す。
@@ -77,6 +95,7 @@ pub fn create(conn: &Connection, input: WorktreeCreateInput) -> AppResult<Worktr
     if path.is_empty() {
         return Err(AppError::InvalidInput("path must not be empty".into()));
     }
+    validate_worktree_path(path)?;
 
     if !project_exists(conn, project_id)? {
         return Err(AppError::NotFound(format!(
@@ -206,6 +225,7 @@ pub fn update(conn: &Connection, input: WorktreeUpdateInput) -> AppResult<Worktr
             if v.is_empty() {
                 return Err(AppError::InvalidInput("path must not be empty".into()));
             }
+            validate_worktree_path(&v)?;
             v
         }
         None => existing.path.clone(),
@@ -257,6 +277,9 @@ mod tests {
     use crate::db::migration::run_pending;
     use crate::db::repo::project as project_repo;
     use crate::domain::project::ProjectCreateInput;
+    use std::fs;
+    use std::path::PathBuf;
+    use uuid::Uuid;
 
     /// テスト用に `:memory:` DB を立ち上げて全マイグレーションを適用する。
     fn setup_db() -> Connection {
@@ -284,10 +307,16 @@ mod tests {
             project_id: project_id.to_string(),
             agent_id: None,
             branch_name: branch_name.to_string(),
-            path: format!("/tmp/worktrees/{}", branch_name),
+            path: make_temp_dir(&format!("worktree-{}", branch_name.replace('/', "-"))),
             base_branch: None,
             status: None,
         }
+    }
+
+    fn make_temp_dir(label: &str) -> String {
+        let path = std::env::temp_dir().join(format!("quietmem-{}-{}", label, Uuid::now_v7()));
+        fs::create_dir_all(&path).expect("temp dir should be created");
+        path.to_string_lossy().to_string()
     }
 
     /// create → list_by_project で 1 件返り、デフォルト値が適用されること。
@@ -302,7 +331,10 @@ mod tests {
         assert!(!created.id.is_empty(), "id should be generated");
         assert_eq!(created.project_id, project_id);
         assert_eq!(created.branch_name, "feature/alpha");
-        assert_eq!(created.path, "/tmp/worktrees/feature/alpha");
+        assert!(
+            PathBuf::from(&created.path).exists(),
+            "created path should exist during test"
+        );
         assert_eq!(
             created.base_branch, "main",
             "base_branch default should be 'main'"
@@ -332,7 +364,7 @@ mod tests {
                 project_id: project_id.clone(),
                 agent_id: Some("agent-abc-123".into()),
                 branch_name: "release/1.0".into(),
-                path: "/tmp/worktrees/release-1".into(),
+                path: make_temp_dir("release-1"),
                 base_branch: Some("develop".into()),
                 status: Some("active".into()),
             },
@@ -377,6 +409,32 @@ mod tests {
             },
         )
         .expect_err("empty branch_name should fail");
+
+        assert!(
+            matches!(err, AppError::InvalidInput(_)),
+            "expected InvalidInput, got {:?}",
+            err
+        );
+    }
+
+    /// 実在しない path で create すると InvalidInput になること。
+    #[test]
+    fn create_with_missing_path_returns_invalid_input() {
+        let conn = setup_db();
+        let project_id = create_project(&conn, "missing-path");
+
+        let err = create(
+            &conn,
+            WorktreeCreateInput {
+                project_id,
+                agent_id: None,
+                branch_name: "feature/x".into(),
+                path: "/definitely/not/a/real/quietmem/worktree".into(),
+                base_branch: None,
+                status: None,
+            },
+        )
+        .expect_err("missing path should fail");
 
         assert!(
             matches!(err, AppError::InvalidInput(_)),
@@ -573,7 +631,7 @@ mod tests {
                 project_id: project_id.clone(),
                 agent_id: Some("agent-keeper".into()),
                 branch_name: "feature/keep".into(),
-                path: "/tmp/worktrees/keep".into(),
+                path: make_temp_dir("keep"),
                 base_branch: Some("develop".into()),
                 status: Some("active".into()),
             },
@@ -626,6 +684,34 @@ mod tests {
             },
         )
         .expect_err("empty branch_name in update should fail");
+
+        assert!(
+            matches!(err, AppError::InvalidInput(_)),
+            "expected InvalidInput, got {:?}",
+            err
+        );
+    }
+
+    /// update で実在しない path を渡すと InvalidInput になること。
+    #[test]
+    fn update_with_missing_path_returns_invalid_input() {
+        let conn = setup_db();
+        let project_id = create_project(&conn, "upd-missing-path");
+        let created = create(&conn, sample_input(&project_id, "feature/keep"))
+            .expect("create should succeed");
+
+        let err = update(
+            &conn,
+            WorktreeUpdateInput {
+                id: created.id,
+                agent_id: None,
+                branch_name: None,
+                path: Some("/definitely/not/a/real/quietmem/worktree".into()),
+                base_branch: None,
+                status: None,
+            },
+        )
+        .expect_err("missing path in update should fail");
 
         assert!(
             matches!(err, AppError::InvalidInput(_)),
