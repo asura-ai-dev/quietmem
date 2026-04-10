@@ -6,14 +6,14 @@
 
 ## Goal
 
-- active worktree を起点に、手動で `git` や CLI coding agent を実行できる統合ターミナルと、外部 IDE / Finder 連携を提供する。
+- active worktree を起点に、手動で `git` や CLI coding agent を実行できる統合ターミナルと、外部 IDE / OS ファイルマネージャ連携を提供する。
 
 ## Scope
 
 - PTY terminal
 - terminal tab 管理
 - active worktree 連動
-- Open in IDE / Finder / Terminal
+- Open in IDE / File Manager / Terminal
 - terminal session lifecycle
 - 手動 CLI 操作
 
@@ -23,7 +23,7 @@
 - active worktree または project root を起点に terminal が開始する
 - 複数 terminal タブを開いて切り替えられる
 - terminal で `git`、`claude code`、`codex` などを手動実行できる
-- current worktree を VS Code / Cursor / Terminal / Finder で開ける
+- current worktree を VS Code / Cursor / Terminal / OS 標準ファイルマネージャで開ける
 - terminal と CLI adapter run が同一 workspace で共存できる
 
 ## Validation

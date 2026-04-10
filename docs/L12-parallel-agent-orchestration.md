@@ -35,7 +35,8 @@ QuietMem 内で複数 agent を並列に走らせ、agent ごとの worktree / t
 ### 4. Orchestration Visibility
 
 - workspace または dashboard から swarm / 並列 run の一覧を確認できる
-- 各 agent について `idle`、`running`、`needs input`、`error`、`done` 相当の状態を一覧表示できる
+- 各 agent について `idle`、`running`、`needs input`、`error` の状態を一覧表示できる
+- 必要に応じて最新 run の結果として `succeeded`、`failed`、`cancelled` を併記できる
 - 各 agent の active worktree、最新 run、terminal、diff への導線を持てる
 
 ### 5. Isolation

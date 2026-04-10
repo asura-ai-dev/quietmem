@@ -15,7 +15,7 @@
 | QTM-005 | Memory Management | project / agent 両スコープの raw / curated / digest memory と想起導線を実装する |
 | QTM-006 | Run Execution and Adapter | CLI adapter による run 実行、ログ表示、履歴を実装する |
 | QTM-007 | Git / Worktree Visibility | active worktree を前提に branch、changed files、diff、worktree 切替を実装する |
-| QTM-010 | Integrated Terminal and IDE Interop | active worktree を起点にした統合ターミナルと外部 IDE / Finder 連携を実装する |
+| QTM-010 | Integrated Terminal and IDE Interop | active worktree を起点にした統合ターミナルと外部 IDE / OS ファイルマネージャ連携を実装する |
 | QTM-011 | Parallel Agent Orchestration | 複数 agent の並列起動、一覧把握、swarm 的 orchestration 導線を実装する |
 | QTM-008 | Cron Scheduling | cron job の CRUD、ON / OFF、手動実行、run 連携、Memory Digest 生成を実装する |
 | QTM-009 | MVP Polish and Reliability | status 表示、エラーハンドリング、memory 候補、UX 調整を行う |
