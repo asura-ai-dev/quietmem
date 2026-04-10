@@ -145,3 +145,9 @@ export interface WorktreeFileContent {
   relativePath: string;
   content: string;
 }
+
+export interface WorktreeFileSaveInput {
+  worktreeId: string;
+  relativePath: string;
+  content: string;
+}

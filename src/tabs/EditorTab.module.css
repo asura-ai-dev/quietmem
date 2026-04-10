@@ -314,6 +314,12 @@
   padding: 0 var(--space-2);
 }
 
+.editorHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .editorLabel {
   font-size: 10px;
   font-family: var(--font-mono);
@@ -332,6 +338,43 @@
   font-size: 11px;
   font-family: var(--font-mono);
   color: var(--fg-muted);
+}
+
+.saveButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88px;
+  padding: 10px 14px;
+  border: 1px solid rgba(111, 143, 106, 0.34);
+  border-radius: 999px;
+  background: rgba(111, 143, 106, 0.16);
+  color: var(--color-sage-50);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    opacity 120ms ease;
+}
+
+.saveButton:hover:not(:disabled) {
+  background: rgba(111, 143, 106, 0.24);
+  border-color: rgba(111, 143, 106, 0.5);
+}
+
+.saveButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(111, 143, 106, 0.42);
+}
+
+.saveButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .editorFrame {
@@ -372,5 +415,10 @@
   .editorHeader {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .editorHeaderActions {
+    width: 100%;
+    justify-content: space-between;
   }
 }

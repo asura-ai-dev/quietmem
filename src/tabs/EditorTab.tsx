@@ -30,7 +30,7 @@ QTM-004D wires file open into the editor shell.
 - Tree source: connected from the selected agent's active worktree
 - File open binding: connected
 - Multi-tab state: QTM-004E
-- Save flow: QTM-004F
+- Save flow: QTM-004F active-tab save is wired
 
 Select a text file from the tree to load it here.`;
 
@@ -238,6 +238,8 @@ function EditorTab() {
   const [activeTabPath, setActiveTabPath] = useState<string | null>(null);
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [fileSaving, setFileSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedProjectId) {
@@ -275,6 +277,8 @@ function EditorTab() {
       setActiveTabPath(null);
       setFileError(null);
       setFileLoading(false);
+      setFileSaving(false);
+      setSaveError(null);
       return () => {
         cancelled = true;
       };
@@ -377,6 +381,7 @@ function EditorTab() {
       setPendingOpenFilePath(null);
       setFileError(null);
       setFileLoading(false);
+      setSaveError(null);
       return () => {
         cancelled = true;
       };
@@ -384,6 +389,7 @@ function EditorTab() {
 
     setFileLoading(true);
     setFileError(null);
+    setSaveError(null);
 
     const loadPromise =
       reviewMode && selectedAgent.activeWorktreeId === REVIEW_TREE_SOURCE.worktreeId
@@ -472,6 +478,7 @@ function EditorTab() {
   const handleActivateTab = (path: string) => {
     setActiveTabPath(path);
     setFileError(null);
+    setSaveError(null);
     setPendingOpenFilePath(null);
   };
 
@@ -490,6 +497,7 @@ function EditorTab() {
       setPendingOpenFilePath(null);
     }
     setFileError(null);
+    setSaveError(null);
   };
 
   const handleEditorChange = (nextValue: string | undefined) => {
@@ -497,6 +505,7 @@ function EditorTab() {
       return;
     }
     const normalizedValue = nextValue ?? "";
+    setSaveError(null);
     setOpenTabs((current) =>
       current.map((tab) =>
         tab.path === activeTabPath ? { ...tab, currentContent: normalizedValue } : tab,
@@ -510,6 +519,81 @@ function EditorTab() {
   const activeTabIsDirty = activeTab
     ? activeTab.currentContent !== activeTab.savedContent
     : false;
+  const activeWorktreeId = selectedAgent?.activeWorktreeId ?? null;
+  const canInterceptSaveShortcut = activeTab !== null && activeWorktreeId !== null;
+  const canSaveActiveTab =
+    activeTab !== null && activeWorktreeId !== null && activeTabIsDirty && !fileSaving;
+
+  const handleSaveActiveTab = async () => {
+    if (!activeTab || !activeWorktreeId || fileSaving) {
+      return;
+    }
+
+    const contentToSave = activeTab.currentContent;
+    if (contentToSave === activeTab.savedContent) {
+      return;
+    }
+
+    setFileSaving(true);
+    setFileError(null);
+    setSaveError(null);
+
+    const savePromise =
+      reviewMode && activeWorktreeId === REVIEW_TREE_SOURCE.worktreeId
+        ? Promise.resolve().then(() => {
+            REVIEW_FILE_CONTENTS[activeTab.path] = contentToSave;
+            return {
+              worktreeId: activeWorktreeId,
+              relativePath: activeTab.path,
+              content: contentToSave,
+            };
+          })
+        : worktreeService.saveFileContent({
+            worktreeId: activeWorktreeId,
+            relativePath: activeTab.path,
+            content: contentToSave,
+          });
+
+    try {
+      const savedFile = await savePromise;
+      setOpenTabs((current) =>
+        current.map((tab) =>
+          tab.path === savedFile.relativePath
+            ? { ...tab, savedContent: savedFile.content }
+            : tab,
+        ),
+      );
+    } catch (err: unknown) {
+      setSaveError(toErrorMessage(err));
+    } finally {
+      setFileSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!canInterceptSaveShortcut) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isSaveKey = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s";
+      if (!isSaveKey) {
+        return;
+      }
+
+      event.preventDefault();
+      if (!canSaveActiveTab) {
+        return;
+      }
+
+      void handleSaveActiveTab();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [canInterceptSaveShortcut, canSaveActiveTab, handleSaveActiveTab]);
 
   const status = selectedProjectId === null
     ? {
@@ -546,24 +630,34 @@ function EditorTab() {
                     label: "Opening File",
                     text: `${pendingOpenFilePath ?? "selected file"} を読み込んでいます。`,
                   }
-                : fileError
-              ? {
-                  label: "Open Error",
-                  text: fileError,
-                }
-              : activeTab
-                ? {
-                    label: activeTabIsDirty ? "Dirty" : "File Open",
-                    text: activeTabIsDirty
-                      ? `${activeTab.path} に未保存の変更があります。`
-                      : `${activeTab.path} を editor に読み込みました。`,
-                  }
-              : {
-                  label: "Tree Ready",
-                  text:
-                    treeSource?.rootPath ??
-                    "active worktree から file tree source を取得済みです。",
-                };
+                : fileSaving
+                  ? {
+                      label: "Saving",
+                      text: `${activeTab?.path ?? "active file"} を保存しています。`,
+                    }
+                  : fileError
+                    ? {
+                        label: "Open Error",
+                        text: fileError,
+                      }
+                    : saveError
+                      ? {
+                          label: "Save Error",
+                          text: saveError,
+                        }
+                      : activeTab
+                        ? {
+                            label: activeTabIsDirty ? "Dirty" : "File Open",
+                            text: activeTabIsDirty
+                              ? `${activeTab.path} に未保存の変更があります。`
+                              : `${activeTab.path} を editor に読み込みました。`,
+                          }
+                        : {
+                            label: "Tree Ready",
+                            text:
+                              treeSource?.rootPath ??
+                              "active worktree から file tree source を取得済みです。",
+                          };
 
   const editorPath = activeTab?.path ?? FOUNDATION_PATH;
   const editorLanguage = inferMonacoLanguage(activeTab?.path ?? null);
@@ -583,8 +677,8 @@ function EditorTab() {
         <div className={styles.eyebrow}>Worktree Context</div>
         <h2 className={styles.title}>active worktree を editor 文脈へ接続</h2>
         <p className={styles.description}>
-          QTM-004D では selected agent の active worktree から選択ファイルを読み込み、
-          Monaco の buffer / path / language を open file に揃えます。
+          QTM-004F では selected agent の active worktree へ active tab の変更を保存し、
+          Monaco の dirty state を save 成功時に clean へ戻します。
         </p>
 
         <section className={styles.section}>
@@ -601,6 +695,7 @@ function EditorTab() {
             <li>{pendingOpenFilePath ? `pending: ${pendingOpenFilePath}` : "pending: —"}</li>
             <li>{activeTab ? `active: ${activeTab.path}` : "active: —"}</li>
             <li>{`tabs: ${openTabs.length}`}</li>
+            <li>{`save: ${fileSaving ? "saving" : activeTabIsDirty ? "dirty" : "idle"}`}</li>
           </ul>
         </section>
 
@@ -610,6 +705,7 @@ function EditorTab() {
             <li>source は agent.activeWorktreeId を唯一の基準にする</li>
             <li>hidden entries と `.git` / `node_modules` / `dist` / `target` を除外する</li>
             <li>open は UTF-8 text file のみを扱い、非対応形式は error として返す</li>
+            <li>save は active tab の既存 UTF-8 text file のみを対象にする</li>
           </ul>
         </section>
 
@@ -688,7 +784,20 @@ function EditorTab() {
             <div className={styles.editorLabel}>Buffer</div>
             <div className={styles.editorTitle}>{bufferTitle}</div>
           </div>
-          <div className={styles.editorMeta}>{editorMeta}</div>
+          <div className={styles.editorHeaderActions}>
+            <div className={styles.editorMeta}>{editorMeta}</div>
+            <button
+              type="button"
+              className={styles.saveButton}
+              disabled={!canSaveActiveTab}
+              aria-label="Save active file"
+              onClick={() => {
+                void handleSaveActiveTab();
+              }}
+            >
+              {fileSaving ? "Saving..." : "Save"}
+            </button>
+          </div>
         </div>
         <div className={styles.editorFrame}>
           <Editor
