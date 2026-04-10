@@ -233,10 +233,10 @@ Depends on: QTM-004G
 - Goal
 - QTM-004 の受け入れ確認と既知制約の明文化を行う
 - Checklist
-- [ ] prompt / config / text / code ファイルで基本動作を手動確認する
-- [ ] file tree 表示、ファイル open、編集、保存の一連動作を確認する
-- [ ] 複数タブ切替と未保存表示を確認する
-- [ ] active worktree 切替時の tree / tab / editor 更新を確認する
+- [x] prompt / config / text / code ファイルで基本動作を手動確認する
+- [x] file tree 表示、ファイル open、編集、保存の一連動作を確認する
+- [x] 複数タブ切替と未保存表示を確認する
+- [x] active worktree 切替時の tree / tab / editor 更新を確認する
 - [x] 既知の非対応事項を ticket か Notes に明記する
 - Done
 - 親 ticket の Validation を一通り確認できている
