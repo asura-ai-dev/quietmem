@@ -1,7 +1,9 @@
 .root {
   display: grid;
   grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
-  min-height: 100%;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
   background:
     radial-gradient(circle at top left, rgba(111, 143, 106, 0.12), transparent 36%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0));
@@ -11,11 +13,56 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  min-height: 0;
   padding: var(--space-8);
+  overflow-y: auto;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0)),
     rgba(0, 0, 0, 0.08);
+  scrollbar-width: none;
+  scrollbar-color: transparent transparent;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 10px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+  border-left: 1px solid transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(0, 0, 0, 0);
+  border-radius: 999px;
+  background: transparent;
+  background-clip: padding-box;
+}
+
+.sidebar:hover,
+.sidebar:focus-within {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(111, 143, 106, 0.48) rgba(255, 255, 255, 0.05);
+}
+
+.sidebar:hover::-webkit-scrollbar-track,
+.sidebar:focus-within::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.sidebar:hover::-webkit-scrollbar-thumb,
+.sidebar:focus-within::-webkit-scrollbar-thumb {
+  background:
+    linear-gradient(180deg, rgba(143, 169, 138, 0.72), rgba(111, 143, 106, 0.48));
+  background-clip: padding-box;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(180deg, rgba(168, 194, 163, 0.82), rgba(111, 143, 106, 0.64));
+  background-clip: padding-box;
 }
 
 .eyebrow {
