@@ -264,21 +264,26 @@ function EditorTab() {
     [selectedAgent, worktrees],
   );
 
+  const resetEditorStateForWorktree = () => {
+    setTreeSource(null);
+    setTreeError(null);
+    setExpandedPaths(new Set());
+    setPendingOpenFilePath(null);
+    setOpenTabs([]);
+    setActiveTabPath(null);
+    setFileError(null);
+    setFileLoading(false);
+    setFileSaving(false);
+    setSaveError(null);
+  };
+
   useEffect(() => {
     let cancelled = false;
 
+    resetEditorStateForWorktree();
+
     if (!selectedAgent?.activeWorktreeId) {
-      setTreeSource(null);
-      setTreeError(null);
       setTreeLoading(false);
-      setExpandedPaths(new Set());
-      setPendingOpenFilePath(null);
-      setOpenTabs([]);
-      setActiveTabPath(null);
-      setFileError(null);
-      setFileLoading(false);
-      setFileSaving(false);
-      setSaveError(null);
       return () => {
         cancelled = true;
       };
@@ -293,9 +298,7 @@ function EditorTab() {
       };
     }
 
-    setPendingOpenFilePath(null);
     setTreeLoading(true);
-    setTreeError(null);
 
     void worktreeService
       .getFileTree(selectedAgent.activeWorktreeId)
@@ -678,7 +681,7 @@ function EditorTab() {
         <h2 className={styles.title}>active worktree を editor 文脈へ接続</h2>
         <p className={styles.description}>
           QTM-004F では selected agent の active worktree へ active tab の変更を保存し、
-          Monaco の dirty state を save 成功時に clean へ戻します。
+          QTM-004G では worktree 切替時に tree / tabs / buffer を同期し、旧 worktree の内容を残しません。
         </p>
 
         <section className={styles.section}>
@@ -706,6 +709,7 @@ function EditorTab() {
             <li>hidden entries と `.git` / `node_modules` / `dist` / `target` を除外する</li>
             <li>open は UTF-8 text file のみを扱い、非対応形式は error として返す</li>
             <li>save は active tab の既存 UTF-8 text file のみを対象にする</li>
+            <li>worktree 切替時は open tabs と pending open を破棄して新 source を再取得する</li>
           </ul>
         </section>
 

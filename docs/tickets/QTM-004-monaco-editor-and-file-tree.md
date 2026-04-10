@@ -100,9 +100,9 @@ Depends on: Phase 4, Phase 5
 
 Depends on: Phase 3, Phase 5, Phase 6
 
-- [ ] active worktree 切替時に file tree を再読込する
-- [ ] active worktree 切替時に editor tab の扱いを決めて実装する
-- [ ] worktree 切替後に旧 worktree の内容が残留しないことを確認する
+- [x] active worktree 切替時に file tree を再読込する
+- [x] active worktree 切替時に editor tab の扱いを決めて実装する
+- [x] worktree 切替後に旧 worktree の内容が残留しないことを確認する
 
 ### Phase 8: Validation
 
@@ -219,9 +219,9 @@ Depends on: QTM-004C, QTM-004E, QTM-004F
 - Goal
 - active worktree 切替時に tree と editor の表示整合を保つ
 - Checklist
-- [ ] active worktree 切替時に file tree を再読込する
-- [ ] active worktree 切替時に editor tab の扱いを決めて実装する
-- [ ] worktree 切替後に旧 worktree の内容が残留しないことを確認する
+- [x] active worktree 切替時に file tree を再読込する
+- [x] active worktree 切替時に editor tab の扱いを決めて実装する
+- [x] worktree 切替後に旧 worktree の内容が残留しないことを確認する
 - Done
 - 現在の worktree に応じて対象ファイルが切り替わる
 - active worktree 切替時に editor / file tree の対象が更新される
