@@ -237,7 +237,7 @@ Depends on: QTM-004G
 - [ ] file tree 表示、ファイル open、編集、保存の一連動作を確認する
 - [ ] 複数タブ切替と未保存表示を確認する
 - [ ] active worktree 切替時の tree / tab / editor 更新を確認する
-- [ ] 既知の非対応事項を ticket か Notes に明記する
+- [x] 既知の非対応事項を ticket か Notes に明記する
 - Done
 - 親 ticket の Validation を一通り確認できている
 - 非対応事項と残課題が文書化されている
