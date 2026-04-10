@@ -61,6 +61,53 @@
   line-height: 1.6;
 }
 
+.validationPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.validationItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-3);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.validationHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.validationLabel {
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(111, 143, 106, 0.16);
+  color: var(--color-sage-50);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.validationPath {
+  color: var(--fg-primary);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.validationDetail {
+  margin: 0;
+  color: var(--fg-muted);
+  line-height: 1.6;
+}
+
 .statusCard {
   display: flex;
   flex-direction: column;

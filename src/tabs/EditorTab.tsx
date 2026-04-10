@@ -39,6 +39,52 @@ const REVIEW_TREE_SOURCE: WorktreeTreeSource = {
   rootPath: "/tmp/eval/wt-phase-2c",
   nodes: [
     {
+      name: ".quietmem",
+      relativePath: ".quietmem",
+      kind: "directory",
+      children: [
+        {
+          name: "prompts",
+          relativePath: ".quietmem/prompts",
+          kind: "directory",
+          children: [
+            {
+              name: "summarize.prompt.md",
+              relativePath: ".quietmem/prompts/summarize.prompt.md",
+              kind: "file",
+              children: [],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      name: "config",
+      relativePath: "config",
+      kind: "directory",
+      children: [
+        {
+          name: "agent.yaml",
+          relativePath: "config/agent.yaml",
+          kind: "file",
+          children: [],
+        },
+      ],
+    },
+    {
+      name: "notes",
+      relativePath: "notes",
+      kind: "directory",
+      children: [
+        {
+          name: "brainstorm.txt",
+          relativePath: "notes/brainstorm.txt",
+          kind: "file",
+          children: [],
+        },
+      ],
+    },
+    {
       name: "src",
       relativePath: "src",
       kind: "directory",
@@ -75,11 +121,47 @@ const REVIEW_TREE_SOURCE: WorktreeTreeSource = {
 
 const REVIEW_FILE_CONTENTS: Record<string, string> = {
   "README.md": "# QuietMem\n\nReview mode sample README.\n",
+  ".quietmem/prompts/summarize.prompt.md":
+    "# Summarize Prompt\n\nSummarize the last run in 3 bullets.\n",
+  "config/agent.yaml":
+    "model: gpt-5.4\nmax_tokens: 1200\nreview_mode: true\n",
+  "notes/brainstorm.txt":
+    "Ideas\n- validate prompt/config/text/code flows\n- capture MVP gaps\n",
   "src/main.tsx":
     "export function bootstrap() {\n  return \"review-mode\";\n}\n",
   "src/tabs/EditorTab.tsx":
     "export const reviewMode = true;\n// QTM-004D sample content\n",
 };
+
+const VALIDATION_SCENARIOS = [
+  {
+    label: "Prompt file",
+    path: ".quietmem/prompts/summarize.prompt.md",
+    detail: "Markdown prompt opens with language binding and can be edited/saved.",
+  },
+  {
+    label: "Config file",
+    path: "config/agent.yaml",
+    detail: "YAML config opens as structured text and participates in dirty/save state.",
+  },
+  {
+    label: "Text file",
+    path: "notes/brainstorm.txt",
+    detail: "Plain text file covers minimal UTF-8 text editing.",
+  },
+  {
+    label: "Code file",
+    path: "src/main.tsx",
+    detail: "Code file verifies TS/JS language inference and normal tab flow.",
+  },
+] as const;
+
+const KNOWN_GAPS = [
+  "Worktree switch discards open tabs, including dirty buffers, without a confirmation step.",
+  "Tabs are scoped in-memory only and are not restored across reloads or remapped by relative path.",
+  "Only existing UTF-8 text files are supported; binary preview and file create/rename/delete remain out of scope.",
+  "Save is active-tab only; save-all and external file change reconciliation are not implemented.",
+] as const;
 
 const configureMonaco: BeforeMount = (monaco) => {
   monaco.editor.defineTheme("quietmem", {
@@ -665,6 +747,9 @@ function EditorTab() {
   const editorPath = activeTab?.path ?? FOUNDATION_PATH;
   const editorLanguage = inferMonacoLanguage(activeTab?.path ?? null);
   const bufferTitle = activeTab?.path ?? pendingOpenFilePath ?? FOUNDATION_PATH;
+  const reviewedScenarios = VALIDATION_SCENARIOS.filter(({ path }) =>
+    availableFilePaths.has(path),
+  );
   const editorMeta = activeTab
     ? `Monaco · ${editorLanguage} · ${activeTab.path} · ${activeTabIsDirty ? "dirty" : "saved"}`
     : pendingOpenFilePath
@@ -710,6 +795,30 @@ function EditorTab() {
             <li>open は UTF-8 text file のみを扱い、非対応形式は error として返す</li>
             <li>save は active tab の既存 UTF-8 text file のみを対象にする</li>
             <li>worktree 切替時は open tabs と pending open を破棄して新 source を再取得する</li>
+          </ul>
+        </section>
+
+        <section className={styles.section}>
+          <h3 className={styles.sectionTitle}>Validation Coverage</h3>
+          <div className={styles.validationPanel}>
+            {reviewedScenarios.map((scenario) => (
+              <article key={scenario.path} className={styles.validationItem}>
+                <div className={styles.validationHeader}>
+                  <span className={styles.validationLabel}>{scenario.label}</span>
+                  <span className={styles.validationPath}>{scenario.path}</span>
+                </div>
+                <p className={styles.validationDetail}>{scenario.detail}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <h3 className={styles.sectionTitle}>Known Gaps</h3>
+          <ul className={styles.list}>
+            {KNOWN_GAPS.map((gap) => (
+              <li key={gap}>{gap}</li>
+            ))}
           </ul>
         </section>
 

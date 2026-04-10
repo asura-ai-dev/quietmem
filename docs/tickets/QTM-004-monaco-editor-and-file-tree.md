@@ -112,7 +112,7 @@ Depends on: Phase 7
 - [ ] file tree 表示、ファイル open、編集、保存の一連動作を確認する
 - [ ] 複数タブ切替と未保存表示を確認する
 - [ ] active worktree 切替時の tree / tab / editor 更新を確認する
-- [ ] 既知の非対応事項を ticket か Notes に明記する
+- [x] 既知の非対応事項を ticket か Notes に明記する
 
 ## Suggested Implementation Tickets
 
@@ -241,3 +241,24 @@ Depends on: QTM-004G
 - Done
 - 親 ticket の Validation を一通り確認できている
 - 非対応事項と残課題が文書化されている
+
+## QTM-004H Validation Notes
+
+- Validation date: 2026-04-10
+- Validation mode: local review fixture via `?review=1`, plus static build validation
+- Covered file types:
+  - prompt: `.quietmem/prompts/summarize.prompt.md`
+  - config: `config/agent.yaml`
+  - text: `notes/brainstorm.txt`
+  - code: `src/main.tsx`
+- Review coverage:
+  - review fixture now exposes file tree entries for prompt / config / text / code acceptance checks
+  - editor sidebar now states the intended validation coverage and current MVP limitations
+  - static validation passed with `pnpm exec tsc -b` and `pnpm build`
+
+## Known Gaps
+
+- Dirty tabs are discarded on worktree switch without a confirmation dialog.
+- Tabs are not restored across app reloads and are not remapped across worktrees by relative path.
+- Only existing UTF-8 text files are supported; binary preview and file create/rename/delete are out of scope.
+- Save is limited to the active tab; save-all and external file change reconciliation are not implemented.
