@@ -9,7 +9,7 @@ QuietMem 内で active worktree を起点に手動コマンドを実行できる
 - 統合ターミナル
 - PTY セッション管理
 - worktree 連動
-- 外部 IDE / Finder 連携
+- 外部 IDE / OS ファイルマネージャ連携
 - terminal 履歴 / 表示
 - CLI agent 実行基盤との責務分離
 
@@ -52,7 +52,7 @@ QuietMem 内で active worktree を起点に手動コマンドを実行できる
 ### 6. External IDE Interop
 
 - ユーザーは current project または active worktree を外部アプリで開ける
-- MVP では `Open in VS Code`、`Open in Cursor`、`Open in Terminal`、`Reveal in Finder` 相当の導線を提供する
+- MVP では `Open in VS Code`、`Open in Cursor`、`Open in Terminal`、`Open in File Manager` 相当の導線を提供する
 - Open 操作は対象 worktree / project root を明示して行う
 - 外部 IDE で開いたあとも QuietMem 側の worktree / diff / terminal 文脈は維持される
 
@@ -76,7 +76,7 @@ QuietMem 内で active worktree を起点に手動コマンドを実行できる
 - ユーザーは active worktree を起点に統合ターミナルを開ける
 - ユーザーは `git` や CLI coding agent を手動実行できる
 - 複数 terminal セッションを切り替えて保持できる
-- ユーザーは current worktree を外部 IDE や Finder / Terminal で開ける
+- ユーザーは current worktree を外部 IDE や OS 標準ファイルマネージャ / Terminal で開ける
 - CLI adapter による run と terminal の責務差が明確である
 
 ## Non-Goals
