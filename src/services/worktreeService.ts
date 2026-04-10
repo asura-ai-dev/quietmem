@@ -7,6 +7,7 @@
 
 import type {
   WorktreeFileContent,
+  WorktreeFileSaveInput,
   WorktreeTreeSource,
   Worktree,
   WorktreeCreateInput,
@@ -24,6 +25,8 @@ const worktreeService = {
       worktreeId,
       relativePath,
     }),
+  saveFileContent: (input: WorktreeFileSaveInput): Promise<WorktreeFileContent> =>
+    safeInvoke<WorktreeFileContent>("worktree_save_file_content", { input }),
   getFileTree: (worktreeId: string): Promise<WorktreeTreeSource> =>
     safeInvoke<WorktreeTreeSource>("worktree_get_file_tree", { worktreeId }),
   update: (input: WorktreeUpdateInput): Promise<Worktree> =>

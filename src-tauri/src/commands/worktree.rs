@@ -10,7 +10,8 @@ use tauri::State;
 use crate::app_state::AppState;
 use crate::db;
 use crate::domain::file_tree::{
-    FileTreeNode, FileTreeNodeKind, WorktreeFileContent, WorktreeTreeSource,
+    FileTreeNode, FileTreeNodeKind, WorktreeFileContent, WorktreeFileSaveInput,
+    WorktreeTreeSource,
 };
 use crate::domain::worktree::{Worktree, WorktreeCreateInput, WorktreeUpdateInput};
 use crate::error::{AppError, AppResult};
@@ -66,6 +67,22 @@ pub fn worktree_get_file_content(
     state.with_conn(|conn| load_file_content_for_worktree(conn, &worktree_id, &relative_path))
 }
 
+/// 指定 worktree 配下の既存テキストファイルへ内容を書き戻す。
+#[tauri::command(rename_all = "camelCase")]
+pub fn worktree_save_file_content(
+    state: State<'_, AppState>,
+    input: WorktreeFileSaveInput,
+) -> AppResult<WorktreeFileContent> {
+    state.with_conn(|conn| {
+        save_file_content_for_worktree(
+            conn,
+            &input.worktree_id,
+            &input.relative_path,
+            &input.content,
+        )
+    })
+}
+
 fn resolve_worktree_root(conn: &rusqlite::Connection, worktree_id: &str) -> AppResult<Worktree> {
     let worktree = db::repo::worktree::get_by_id(conn, worktree_id)?
         .ok_or_else(|| AppError::NotFound(format!("worktree not found: {}", worktree_id)))?;
@@ -107,6 +124,47 @@ fn load_file_content_for_worktree(
     worktree_id: &str,
     relative_path: &str,
 ) -> AppResult<WorktreeFileContent> {
+    let (worktree, safe_relative, canonical_file) =
+        resolve_worktree_file_path(conn, worktree_id, relative_path)?;
+
+    let bytes = fs::read(&canonical_file)?;
+    let content = String::from_utf8(bytes).map_err(|_| {
+        AppError::InvalidInput(format!(
+            "only UTF-8 text files are supported: {}",
+            relative_path
+        ))
+    })?;
+
+    Ok(WorktreeFileContent {
+        worktree_id: worktree.id,
+        relative_path: safe_relative,
+        content,
+    })
+}
+
+fn save_file_content_for_worktree(
+    conn: &rusqlite::Connection,
+    worktree_id: &str,
+    relative_path: &str,
+    content: &str,
+) -> AppResult<WorktreeFileContent> {
+    let (worktree, safe_relative, canonical_file) =
+        resolve_worktree_file_path(conn, worktree_id, relative_path)?;
+
+    fs::write(&canonical_file, content.as_bytes())?;
+
+    Ok(WorktreeFileContent {
+        worktree_id: worktree.id,
+        relative_path: safe_relative,
+        content: content.to_string(),
+    })
+}
+
+fn resolve_worktree_file_path(
+    conn: &rusqlite::Connection,
+    worktree_id: &str,
+    relative_path: &str,
+) -> AppResult<(Worktree, String, PathBuf)> {
     let worktree = resolve_worktree_root(conn, worktree_id)?;
     let root = PathBuf::from(&worktree.path);
     let canonical_root = root.canonicalize()?;
@@ -134,19 +192,7 @@ fn load_file_content_for_worktree(
         )));
     }
 
-    let bytes = fs::read(&canonical_file)?;
-    let content = String::from_utf8(bytes).map_err(|_| {
-        AppError::InvalidInput(format!(
-            "only UTF-8 text files are supported: {}",
-            relative_path
-        ))
-    })?;
-
-    Ok(WorktreeFileContent {
-        worktree_id: worktree.id,
-        relative_path: safe_relative,
-        content,
-    })
+    Ok((worktree, safe_relative, canonical_file))
 }
 
 fn collect_tree_nodes(root: &Path, current: &Path) -> AppResult<Vec<FileTreeNode>> {
@@ -422,6 +468,73 @@ mod tests {
         let err = load_file_content_for_worktree(&conn, &worktree.id, "artifact.bin")
             .expect_err("binary file should be rejected");
         assert!(matches!(err, AppError::InvalidInput(_)));
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn worktree_file_save_writes_utf8_text_file() {
+        let conn = setup_db();
+        let project_id = create_project(&conn);
+        let root = make_temp_dir();
+        fs::create_dir_all(root.join("src")).expect("src should exist");
+        fs::write(root.join("src/lib.rs"), "pub fn meaning() -> i32 { 42 }\n")
+            .expect("src/lib.rs should exist");
+
+        let worktree = worktree_repo::create(
+            &conn,
+            WorktreeCreateInput {
+                project_id,
+                agent_id: Some("agent-1".into()),
+                branch_name: "feature/save".into(),
+                path: root.to_string_lossy().to_string(),
+                base_branch: None,
+                status: None,
+            },
+        )
+        .expect("worktree create should succeed");
+
+        let saved = save_file_content_for_worktree(
+            &conn,
+            &worktree.id,
+            "src/lib.rs",
+            "pub fn meaning() -> i32 { 43 }\n",
+        )
+        .expect("file content should save");
+
+        assert_eq!(saved.worktree_id, worktree.id);
+        assert_eq!(saved.relative_path, "src/lib.rs");
+        assert_eq!(saved.content, "pub fn meaning() -> i32 { 43 }\n");
+        assert_eq!(
+            fs::read_to_string(root.join("src/lib.rs")).expect("saved file should be readable"),
+            "pub fn meaning() -> i32 { 43 }\n"
+        );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn worktree_file_save_rejects_missing_target() {
+        let conn = setup_db();
+        let project_id = create_project(&conn);
+        let root = make_temp_dir();
+
+        let worktree = worktree_repo::create(
+            &conn,
+            WorktreeCreateInput {
+                project_id,
+                agent_id: None,
+                branch_name: "feature/save-missing".into(),
+                path: root.to_string_lossy().to_string(),
+                base_branch: None,
+                status: None,
+            },
+        )
+        .expect("worktree create should succeed");
+
+        let err = save_file_content_for_worktree(&conn, &worktree.id, "src/missing.ts", "noop\n")
+            .expect_err("missing file should be rejected");
+        assert!(matches!(err, AppError::NotFound(_)));
 
         let _ = fs::remove_dir_all(root);
     }

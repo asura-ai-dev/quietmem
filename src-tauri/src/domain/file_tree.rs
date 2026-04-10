@@ -32,3 +32,11 @@ pub struct WorktreeFileContent {
     pub relative_path: String,
     pub content: String,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorktreeFileSaveInput {
+    pub worktree_id: String,
+    pub relative_path: String,
+    pub content: String,
+}

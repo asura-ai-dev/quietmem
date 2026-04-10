@@ -36,6 +36,7 @@ pub fn run() {
             commands::worktree::worktree_get_file_content,
             commands::worktree::worktree_get_file_tree,
             commands::worktree::worktree_list_by_project,
+            commands::worktree::worktree_save_file_content,
             commands::worktree::worktree_update,
         ])
         .run(tauri::generate_context!())
