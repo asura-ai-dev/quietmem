@@ -137,7 +137,7 @@ function OverviewTab() {
                 key={selectedAgent.id}
                 agent={selectedAgent}
                 worktrees={worktreesForProject}
-                onSaved={() => setSelectedAgentId(null)}
+                onSaved={(updatedAgent) => setSelectedAgentId(updatedAgent.id)}
               />
             )}
           </>

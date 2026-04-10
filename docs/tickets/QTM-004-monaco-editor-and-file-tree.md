@@ -108,10 +108,10 @@ Depends on: Phase 3, Phase 5, Phase 6
 
 Depends on: Phase 7
 
-- [ ] prompt / config / text / code ファイルで基本動作を手動確認する
-- [ ] file tree 表示、ファイル open、編集、保存の一連動作を確認する
-- [ ] 複数タブ切替と未保存表示を確認する
-- [ ] active worktree 切替時の tree / tab / editor 更新を確認する
+- [x] prompt / config / text / code ファイルで基本動作を手動確認する
+- [x] file tree 表示、ファイル open、編集、保存の一連動作を確認する
+- [x] 複数タブ切替と未保存表示を確認する
+- [x] active worktree 切替時の tree / tab / editor 更新を確認する
 - [x] 既知の非対応事項を ticket か Notes に明記する
 
 ## Suggested Implementation Tickets

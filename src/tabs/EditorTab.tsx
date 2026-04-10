@@ -801,15 +801,23 @@ function EditorTab() {
         <section className={styles.section}>
           <h3 className={styles.sectionTitle}>Validation Coverage</h3>
           <div className={styles.validationPanel}>
-            {reviewedScenarios.map((scenario) => (
-              <article key={scenario.path} className={styles.validationItem}>
-                <div className={styles.validationHeader}>
-                  <span className={styles.validationLabel}>{scenario.label}</span>
-                  <span className={styles.validationPath}>{scenario.path}</span>
-                </div>
-                <p className={styles.validationDetail}>{scenario.detail}</p>
-              </article>
-            ))}
+            {reviewedScenarios.length > 0 ? (
+              reviewedScenarios.map((scenario) => (
+                <article key={scenario.path} className={styles.validationItem}>
+                  <div className={styles.validationHeader}>
+                    <span className={styles.validationLabel}>{scenario.label}</span>
+                    <span className={styles.validationPath}>{scenario.path}</span>
+                  </div>
+                  <p className={styles.validationDetail}>{scenario.detail}</p>
+                </article>
+              ))
+            ) : (
+              <p className={styles.validationEmpty}>
+                {reviewMode
+                  ? "Review fixture を開くと、ここに prompt / config / text / code の確認対象が表示されます。"
+                  : "selected agent の active worktree が解決され、対応するファイルが見つかると、ここに validation 対象を表示します。"}
+              </p>
+            )}
           </div>
         </section>
 

@@ -366,7 +366,7 @@ mod tests {
     fn file_tree_source_returns_not_found_when_root_is_missing() {
         let conn = setup_db();
         let project_id = create_project(&conn);
-        let root = std::env::temp_dir().join(format!("quietmem-missing-{}", Uuid::now_v7()));
+        let root = make_temp_dir();
 
         let worktree = worktree_repo::create(
             &conn,
@@ -380,6 +380,8 @@ mod tests {
             },
         )
         .expect("worktree create should succeed");
+
+        let _ = fs::remove_dir_all(&root);
 
         let err = load_file_tree_for_worktree(&conn, &worktree.id)
             .expect_err("missing directory should return error");
